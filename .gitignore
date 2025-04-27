@@ -7,6 +7,9 @@
 .AppleDouble
 .LSOverride
 
+# Project specific
+/app/docs/out/*
+
 # Icon must end with two \r
 Icon
 
@@ -240,10 +243,6 @@ yarn-error.log*
 .vscode/
 *.swp
 *.swo
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
 
 # Temporary files
 tmp/
@@ -252,4 +251,4 @@ temp/
 # System files
 Thumbs.db
 ehthumbs.db
-Desktop.ini 
+Desktop.ini

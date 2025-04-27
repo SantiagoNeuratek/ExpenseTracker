@@ -1,0 +1,78 @@
+# Git
+.git
+.gitignore
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.so
+**/.Python
+**/build/
+**/develop-eggs/
+**/dist/
+**/downloads/
+**/eggs/
+**/.eggs/
+**/lib/
+**/lib64/
+**/parts/
+**/sdist/
+**/var/
+**/*.egg-info/
+**/.installed.cfg
+**/*.egg
+**/.pytest_cache/
+**/.coverage
+**/.tox/
+**/htmlcov/
+
+# Environments
+.env
+**/.env
+**/.venv
+**/env/
+**/venv/
+**/ENV/
+**/env.bak/
+**/venv.bak/
+
+# IDE
+.idea
+.vscode
+**/*.swp
+**/*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Database
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# Testing
+**/k6/results/
+
+# Documentation
+README.md
+**/docs/
+
+# Local Alembic migrations that shouldn't be in container
+# Note: Don't ignore all alembic, just sensitive parts
+**/alembic/versions/__pycache__/
+
+# Logs
+**/logs/
+**/*.log
+
+# Other
+**/.ipynb_checkpoints
+**/.mypy_cache/
+**/.ruff_cache/ 

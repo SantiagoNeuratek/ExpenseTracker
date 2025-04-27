@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:8501", "http://localhost:8000"]
 
     # Base de datos
-    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_SERVER: str
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "expense_tracker"

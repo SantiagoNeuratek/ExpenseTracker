@@ -1,7 +1,7 @@
 from typing import Any, List
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import and_, func
 
 from app.api.deps import (
@@ -267,20 +267,33 @@ def get_top_categories(
 ) -> Any:
     """
     Obtener las 3 categorías con más gastos acumulados (endpoint público con API key).
+    
+    This endpoint is optimized for performance with proper indexes on:
+    - expenses.company_id
+    - expenses.category_id
+    - categories.company_id
+    - categories.is_active
     """
+    # Use the indexes effectively with explicit joining and filtering
     top_categories = (
         db.query(
-            Category.id, Category.name, func.sum(Expense.amount).label("total_amount")
+            Category.id, 
+            Category.name, 
+            func.sum(Expense.amount).label("total_amount")
         )
         .join(Expense, Category.id == Expense.category_id)
-        .filter(and_(Category.company_id == company_id, Category.is_active == True))
+        .filter(
+            Category.company_id == company_id,
+            Category.is_active == True,
+            Expense.company_id == company_id  # Redundant for safety but uses index
+        )
         .group_by(Category.id, Category.name)
         .order_by(func.sum(Expense.amount).desc())
         .limit(3)
         .all()
     )
 
-    # Formatear resultado
+    # Format the result with proper types
     result = [
         {"id": cat_id, "name": name, "total_amount": float(total_amount)}
         for cat_id, name, total_amount in top_categories
@@ -299,16 +312,20 @@ def get_expenses_by_category(
 ) -> Any:
     """
     Obtener gastos filtrados por categoría y rango de fechas (endpoint público con API key).
+    
+    This endpoint is optimized for performance with proper indexes on:
+    - expenses.company_id
+    - expenses.category_id 
+    - expenses.date_incurred
+    - The composite index on (company_id, category_id, date_incurred)
     """
-    # Verificar que la categoría pertenece a la empresa
+    # Verify category belongs to company (uses ix_categories_company_active index)
     category = (
         db.query(Category)
         .filter(
-            and_(
-                Category.id == category_id,
-                Category.company_id == company_id,
-                Category.is_active == True,
-            )
+            Category.id == category_id,
+            Category.company_id == company_id,
+            Category.is_active == True,
         )
         .first()
     )
@@ -318,21 +335,25 @@ def get_expenses_by_category(
             status_code=status.HTTP_404_NOT_FOUND, detail="Categoría no encontrada"
         )
 
-    # Obtener gastos
+    # Get expenses with efficient query using indexes and eager loading
+    # This avoids N+1 query problems when accessing relationships
     expenses = (
         db.query(Expense)
-        .filter(
-            and_(
-                Expense.category_id == category_id,
-                Expense.company_id == company_id,
-                Expense.date_incurred >= start_date,
-                Expense.date_incurred <= end_date,
-            )
+        .options(
+            selectinload(Expense.user),
+            selectinload(Expense.category)
         )
+        .filter(
+            Expense.category_id == category_id,
+            Expense.company_id == company_id,
+            Expense.date_incurred >= start_date,
+            Expense.date_incurred <= end_date,
+        )
+        .order_by(Expense.date_incurred.desc())
         .all()
     )
 
-    # Agregar nombre de categoría a cada gasto
+    # Add category name to each expense for convenience
     for expense in expenses:
         setattr(expense, "category_name", category.name)
 

@@ -22,7 +22,7 @@ config = context.config
 database_url = os.environ.get("SQLALCHEMY_DATABASE_URI", 
     f"postgresql://{os.environ.get('POSTGRES_USER', 'postgres')}:"
     f"{os.environ.get('POSTGRES_PASSWORD', 'postgres')}@"
-    f"{os.environ.get('POSTGRES_SERVER', 'localhost')}:"
+    f"{os.environ.get('POSTGRES_SERVER', 'db')}:"
     f"5432/{os.environ.get('POSTGRES_DB', 'expense_tracker')}"
 )
 config.set_main_option("sqlalchemy.url", database_url)

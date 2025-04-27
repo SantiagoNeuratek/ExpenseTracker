@@ -31,6 +31,9 @@ def render():
         st.session_state.expense_to_delete = None
     if "expense_to_edit" not in st.session_state:
         st.session_state.expense_to_edit = None
+    # Asegurar que selected_category_id exista en session_state
+    if "selected_category_id" not in st.session_state:
+        st.session_state.selected_category_id = None
 
     # Funciones específicas de gastos
     def create_expense(data):
@@ -653,85 +656,34 @@ def render():
                                 unsafe_allow_html=True,
                             )
 
-                # Formulario de creación de gastos con mejor manejo de errores
-                with st.form("create_expense_form"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        amount = st.number_input(
-                            "Monto ($)",
-                            min_value=0.01,
-                            step=0.01,
-                            help="Ingresa el valor del gasto",
-                        )
-                    with col2:
-                        date = st.date_input(
-                            "Fecha",
-                            value=datetime.now(),
-                            help="Selecciona la fecha en que se realizó el gasto",
-                        )
+                # Seleccionar categoría primero y establecer en session_state
+                category_id = st.selectbox(
+                    "Categoría",
+                    options=[cat["id"] for cat in categories],
+                    format_func=lambda x: next(
+                        (cat["name"] for cat in categories if cat["id"] == x), ""
+                    ),
+                    help="Selecciona la categoría del gasto",
+                )
+                
+                # Actualizar la variable en session_state que usa el componente form
+                st.session_state.selected_category_id = category_id
 
-                    category_id = st.selectbox(
-                        "Categoría",
-                        options=[cat["id"] for cat in categories],
-                        format_func=lambda x: next(
-                            (cat["name"] for cat in categories if cat["id"] == x), ""
-                        ),
-                        help="Selecciona la categoría del gasto",
+                # Mostrar límite de categoría si existe
+                selected_cat = next(
+                    (cat for cat in categories if cat["id"] == category_id), None
+                )
+                if selected_cat and selected_cat.get("expense_limit"):
+                    st.info(
+                        f"ℹ️ Límite de gasto para esta categoría: ${selected_cat['expense_limit']:.2f}"
                     )
 
-                    # Mostrar límite de categoría si existe y actualizar en tiempo real
-                    selected_cat = next(
-                        (cat for cat in categories if cat["id"] == category_id), None
-                    )
-                    if selected_cat and selected_cat.get("expense_limit"):
-                        if amount > selected_cat.get("expense_limit", 0):
-                            st.warning(
-                                f"⚠️ El monto excede el límite de esta categoría (${selected_cat['expense_limit']:.2f})"
-                            )
-                        else:
-                            st.info(
-                                f"ℹ️ Límite de gasto para esta categoría: ${selected_cat['expense_limit']:.2f}"
-                            )
-
-                    description = st.text_area(
-                        "Descripción",
-                        placeholder="Detalle del gasto...",
-                        help="Proporciona una descripción clara del gasto",
-                        height=100,
-                    )
-
-                    # Mejor diseño para botones
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.form_submit_button("Limpiar", use_container_width=True)
-                    with col2:
-                        submitted = st.form_submit_button(
-                            "💾 Registrar Gasto",
-                            use_container_width=True,
-                            type="primary",
-                        )
-
-                    if submitted:
-                        if amount <= 0:
-                            st.error("El monto debe ser mayor a cero")
-                        elif not category_id:
-                            st.error("Debe seleccionar una categoría")
-                        else:
-                            with st.spinner("Registrando gasto..."):
-                                data = {
-                                    "amount": amount,
-                                    "date": date,
-                                    "category_id": category_id,
-                                    "description": description,
-                                }
-
-                                success, message = create_expense(data)
-                                if success:
-                                    st.balloons()  # Efecto visual para confirmación
-                                    time.sleep(
-                                        0.5
-                                    )  # Pequeña pausa para mejor feedback visual
-                                    st.rerun()
+                # Usar el componente de formulario importado
+                if create_expense_form(create_expense):
+                    st.balloons()  # Efecto visual para confirmación
+                    time.sleep(0.5)  # Pequeña pausa para mejor feedback visual
+                    st.rerun()
+                
         except Exception as e:
             st.error(f"Error al cargar las categorías: {str(e)}")
             st.info(

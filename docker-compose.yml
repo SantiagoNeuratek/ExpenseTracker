@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
@@ -18,7 +16,10 @@ services:
       retries: 5
 
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      args:
+        - INSTALL_DEV=false
     volumes:
       - ./backend:/app
     ports:
@@ -28,6 +29,14 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=expense_tracker
+      - LOG_LEVEL=INFO
+      - JSON_LOGS=true
+      - ENVIRONMENT=development
+      - ACCESS_TOKEN_EXPIRE_MINUTES=10080
+      - SECRET_KEY=${SECRET_KEY:-secretkeyfordev}
+      - SERVER_NAME=ExpenseTracker
+      - SERVER_HOST=http://localhost:8000
+      - BACKEND_CORS_ORIGINS=["http://localhost:8501", "http://localhost:8000", "http://frontend:8501"]
     depends_on:
       db:
         condition: service_healthy
@@ -43,7 +52,30 @@ services:
       - BACKEND_URL=http://backend:8000
     depends_on:
       - backend
-    command: streamlit run Home.py
+    command: streamlit run streamlit_app.py
+
+  # Service for running tests
+  test:
+    build:
+      context: ./backend
+      args:
+        - INSTALL_DEV=true
+    volumes:
+      - ./backend:/app
+    environment:
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=expense_tracker_test
+      - LOG_LEVEL=DEBUG
+      - JSON_LOGS=false
+      - ENVIRONMENT=test
+      - ACCESS_TOKEN_EXPIRE_MINUTES=10080
+      - SECRET_KEY=${SECRET_KEY:-secretkeyfortests}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: pytest -xvs
 
 volumes:
   postgres_data:

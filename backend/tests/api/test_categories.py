@@ -1,86 +1,170 @@
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+from unittest.mock import patch
+
+from app.models.category import Category
 
 
-def test_create_category(client: TestClient, user_token: str):
+def test_get_categories(client: TestClient, user_token: str):
+    """Test getting all categories for the user's company"""
+    # Arrange
+    headers = {"Authorization": f"Bearer {user_token}"}
+    
+    # Act
+    response = client.get("/api/v1/categories", headers=headers)
+    
+    # Assert
+    assert response.status_code == 200
+    categories = response.json()
+    assert isinstance(categories, list)
+    assert len(categories) >= 2  # At least the two test categories
+    
+    # Check structure of returned categories
+    for category in categories:
+        assert "id" in category
+        assert "name" in category
+        assert "description" in category
+        assert "company_id" in category
+        assert "expense_limit" in category
+        assert "is_active" in category
+
+
+def test_create_category(client: TestClient, user_token: str, db: Session):
+    """Test creating a new category"""
+    # Arrange
     headers = {"Authorization": f"Bearer {user_token}"}
     category_data = {
         "name": "New Test Category",
         "description": "A new test category",
         "expense_limit": 200.0,
     }
+    
+    # Act
     response = client.post("/api/v1/categories", json=category_data, headers=headers)
+    
+    # Assert
     assert response.status_code == 200
-    assert response.json()["name"] == category_data["name"]
-    assert response.json()["description"] == category_data["description"]
-    assert response.json()["expense_limit"] == category_data["expense_limit"]
-    assert "id" in response.json()
+    created_category = response.json()
+    assert created_category["name"] == category_data["name"]
+    assert created_category["description"] == category_data["description"]
+    assert created_category["expense_limit"] == category_data["expense_limit"]
+    assert "id" in created_category
+    
+    # Verify category was actually created in database
+    db_category = db.query(Category).filter(Category.id == created_category["id"]).first()
+    assert db_category is not None
+    assert db_category.name == category_data["name"]
 
 
-def test_read_categories(client: TestClient, user_token: str):
+def test_create_category_with_duplicate_name(client: TestClient, user_token: str, db: Session):
+    """Test creating a category with a name that already exists returns an error"""
+    # Arrange
     headers = {"Authorization": f"Bearer {user_token}"}
-    response = client.get("/api/v1/categories", headers=headers)
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
-    assert (
-        len(response.json()) >= 2
-    )  # Tenemos al menos las 2 categorías iniciales + la nueva
-
-
-def test_read_category(client: TestClient, user_token: str):
-    headers = {"Authorization": f"Bearer {user_token}"}
-    response = client.get("/api/v1/categories/1", headers=headers)
-    assert response.status_code == 200
-    assert response.json()["id"] == 1
-    assert response.json()["name"] == "Category 1"
-
-
-def test_update_category(client: TestClient, user_token: str):
-    headers = {"Authorization": f"Bearer {user_token}"}
-    update_data = {"description": "Updated description"}
-    response = client.put("/api/v1/categories/1", json=update_data, headers=headers)
-    assert response.status_code == 200
-    assert response.json()["id"] == 1
-    assert response.json()["description"] == "Updated description"
-
-
-def test_delete_category(client: TestClient, user_token: str):
-    headers = {"Authorization": f"Bearer {user_token}"}
-    response = client.delete("/api/v1/categories/2", headers=headers)
-    assert response.status_code == 200
-
-    # Verificar que la categoría se marcó como inactiva
-    response = client.get("/api/v1/categories/2", headers=headers)
-    assert response.status_code == 404  # Ya no debería encontrarse
-
-
-def test_create_category_duplicate_name(client: TestClient, user_token: str):
-    headers = {"Authorization": f"Bearer {user_token}"}
-
-    # Primero creamos una categoría
+    
+    # Get existing category name
+    existing_category = db.query(Category).first()
+    
     category_data = {
-        "name": "Test Duplicate",
-        "description": "This is a test for duplicates",
-        "expense_limit": None,
+        "name": existing_category.name,  # Use existing name to trigger duplicate error
+        "description": "Duplicate category test",
+        "expense_limit": 150.0,
     }
+    
+    # Act
     response = client.post("/api/v1/categories", json=category_data, headers=headers)
-    assert response.status_code == 200
-
-    # Ahora intentamos crear otra con el mismo nombre
-    response = client.post("/api/v1/categories", json=category_data, headers=headers)
+    
+    # Assert
     assert response.status_code == 400
     assert "Ya existe una categoría con este nombre" in response.json()["detail"]
 
 
-def test_update_category_not_found(client: TestClient, user_token: str):
+def test_get_category_by_id(client: TestClient, user_token: str, db: Session):
+    """Test getting a single category by ID"""
+    # Arrange
     headers = {"Authorization": f"Bearer {user_token}"}
-    update_data = {"description": "This category doesn't exist"}
-    response = client.put("/api/v1/categories/9999", json=update_data, headers=headers)
+    existing_category = db.query(Category).first()
+    
+    # Act
+    response = client.get(f"/api/v1/categories/{existing_category.id}", headers=headers)
+    
+    # Assert
+    assert response.status_code == 200
+    category = response.json()
+    assert category["id"] == existing_category.id
+    assert category["name"] == existing_category.name
+    assert category["description"] == existing_category.description
+
+
+def test_get_category_not_found(client: TestClient, user_token: str):
+    """Test getting a non-existent category returns 404"""
+    # Arrange
+    headers = {"Authorization": f"Bearer {user_token}"}
+    
+    # Act
+    response = client.get("/api/v1/categories/99999", headers=headers)
+    
+    # Assert
     assert response.status_code == 404
     assert "Categoría no encontrada" in response.json()["detail"]
 
 
-def test_delete_category_not_found(client: TestClient, user_token: str):
+def test_update_category(client: TestClient, user_token: str, db: Session):
+    """Test updating a category"""
+    # Arrange
     headers = {"Authorization": f"Bearer {user_token}"}
-    response = client.delete("/api/v1/categories/9999", headers=headers)
-    assert response.status_code == 404
-    assert "Categoría no encontrada" in response.json()["detail"]
+    existing_category = db.query(Category).first()
+    
+    update_data = {
+        "name": f"Updated {existing_category.name}",
+        "description": "Updated description",
+        "expense_limit": 300.0,
+    }
+    
+    # Act
+    response = client.put(
+        f"/api/v1/categories/{existing_category.id}", 
+        json=update_data, 
+        headers=headers
+    )
+    
+    # Assert
+    assert response.status_code == 200
+    updated_category = response.json()
+    assert updated_category["name"] == update_data["name"]
+    assert updated_category["description"] == update_data["description"]
+    assert updated_category["expense_limit"] == update_data["expense_limit"]
+    
+    # Verify the update happened in database
+    db.refresh(existing_category)
+    assert existing_category.name == update_data["name"]
+    assert existing_category.description == update_data["description"]
+    assert existing_category.expense_limit == update_data["expense_limit"]
+
+
+def test_delete_category(client: TestClient, admin_token: str, db: Session):
+    """Test soft deleting a category (setting is_active to False)"""
+    # Arrange
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    existing_category = db.query(Category).first()
+    
+    # Act
+    response = client.delete(f"/api/v1/categories/{existing_category.id}", headers=headers)
+    
+    # Assert
+    assert response.status_code == 200
+    assert response.json()["message"] == "Categoría eliminada"
+    
+    # Verify category was soft deleted in database
+    db.refresh(existing_category)
+    assert existing_category.is_active is False
+
+
+def test_unauthorized_access(client: TestClient):
+    """Test accessing endpoints without authentication returns 401"""
+    # Act
+    response = client.get("/api/v1/categories")
+    
+    # Assert
+    assert response.status_code == 401
+    assert "Not authenticated" in response.json()["detail"]

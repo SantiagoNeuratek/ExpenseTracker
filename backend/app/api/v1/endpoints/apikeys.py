@@ -41,8 +41,8 @@ def create_api_key(
     """
     Crear una nueva API key.
     """
-    # Generar API key
-    key = create_api_key()
+    # Generar API key with JWT
+    key = create_api_key(current_user.id, current_user.company_id)
     key_hash = hash_api_key(key)
 
     # Crear registro en base de datos

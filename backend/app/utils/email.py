@@ -5,6 +5,7 @@ from email.mime.text import MIMEText
 from typing import Dict, List, Optional
 
 from app.core.config import settings
+from app.core.security import create_invitation_token
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,12 @@ def send_new_account_email(
     """
     Enviar correo de invitación a un nuevo usuario.
     """
+    # Create a unique invitation token
+    invitation_token = create_invitation_token(username)
+    
+    # Generate registration link with the token
+    registration_link = f"{settings.SERVER_HOST}/api/v1/auth/register?token={invitation_token}"
+    
     subject = f"Invitación a {company_name} - Expense Tracker"
 
     html_content = f"""
@@ -62,13 +69,9 @@ def send_new_account_email(
         <body>
             <p>Hola,</p>
             <p>Has sido invitado a unirte a la empresa {company_name} en Expense Tracker.</p>
-            <p>Tus credenciales de acceso son:</p>
-            <ul>
-                <li>Usuario: {username}</li>
-                <li>Contraseña: {password}</li>
-            </ul>
-            <p>Por favor, cambia tu contraseña después de iniciar sesión.</p>
-            <p>Puedes acceder al sistema en: {settings.SERVER_HOST}</p>
+            <p>Haz clic en el siguiente enlace para completar tu registro:</p>
+            <p><a href="{registration_link}">Completar registro</a></p>
+            <p>Este enlace expirará en 24 horas.</p>
             <p>Saludos,<br/>Equipo de Expense Tracker</p>
         </body>
     </html>

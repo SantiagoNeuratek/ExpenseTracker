@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 import importlib
 
-from components.auth import is_authenticated, login, logout, check_token_expiration
+from components.auth import is_authenticated, login, logout, check_token_expiration, API_URL
 from utils.core import get_current_user, get_company_info
 
 from components.notifications import add_notification, display_notifications, init_notifications
@@ -73,9 +73,22 @@ def remove_notification(notification_id):
 def load_custom_css():
     custom_css = """
     <style>
+        /* Force light mode */
+        html {
+            background-color: white !important;
+            color: #262730 !important;
+        }
+        
+        /* Ensure dark mode is disabled */
+        [data-testid="stAppViewBlockContainer"] {
+            background-color: white !important;
+        }
+        
         /* Mejorar la apariencia general */
         .stApp {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: white !important;
+            color: #262730 !important;
         }
         
         /* Botones más atractivos */
@@ -255,35 +268,101 @@ def render_sidebar():
 # ----- Página de inicio de sesión -----
 def render_login_page():
     """Página de inicio de sesión centrada y sin sidebar."""
+    # Add light mode styles for login page
+    st.markdown("""
+        <style>
+        body {
+            background-color: white !important;
+            color: #262730 !important;
+        }
+        .stApp {
+            background-color: white !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     st.image("assets/expensia_logo.png", width=300)
 
-    with st.form("login_form"):
-        email = st.text_input("Correo electrónico", placeholder="ejemplo@empresa.com")
-        password = st.text_input("Contraseña", type="password")
-        submitted = st.form_submit_button("Iniciar Sesión", use_container_width=True)
+    # Add registration option
+    login_tab, register_tab = st.tabs(["💼 Iniciar Sesión", "✨ Registrarse"])
+    
+    with login_tab:
+        with st.form("login_form"):
+            email = st.text_input("Correo electrónico", placeholder="ejemplo@empresa.com")
+            password = st.text_input("Contraseña", type="password")
+            submitted = st.form_submit_button("Iniciar Sesión", use_container_width=True)
 
-        if submitted:
-            if not email or not password:
-                add_notification("Por favor, complete todos los campos", "error")
-            else:
-                with st.spinner("Iniciando sesión..."):
-                    success, message = login(email, password)
-                    if success:
-                        add_notification(message, "success")
-                        # Una vez logueado, establecer página predeterminada
-                        st.session_state.current_page = "dashboard"
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        add_notification(message, "error")
+            if submitted:
+                if not email or not password:
+                    add_notification("Por favor, complete todos los campos", "error")
+                else:
+                    with st.spinner("Iniciando sesión..."):
+                        success, message = login(email, password)
+                        if success:
+                            add_notification(message, "success")
+                            # Una vez logueado, establecer página predeterminada
+                            st.session_state.current_page = "dashboard"
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            add_notification(message, "error")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with st.expander("Datos de acceso para pruebas"):
-        st.write("""
-        - **Usuario Administrador**: admin@saas.com / Password1  
-        - **Usuario Miembro**: usuario@ort.com / Password1
-        """)
+        with st.expander("Datos de acceso para pruebas"):
+            st.write("""
+            - **Usuario Administrador**: admin@saas.com / Password1  
+            - **Usuario Miembro**: usuario@ort.com / Password1
+            """)
+    
+    with register_tab:
+        st.markdown("### Registro de Usuario")
+        st.markdown("Complete este formulario si ha recibido una invitación por correo electrónico.")
+        
+        # Handle invitation token
+        invitation_token = st.query_params.get("token", "")
+        
+        with st.form("register_form"):
+            reg_email = st.text_input("Correo electrónico", placeholder="ejemplo@empresa.com")
+            reg_password = st.text_input("Contraseña", type="password", 
+                                      help="Mínimo 8 caracteres, al menos una mayúscula, un número y un caracter especial")
+            reg_password_confirm = st.text_input("Confirmar contraseña", type="password")
+            
+            token_input = st.text_input("Token de invitación", value=invitation_token,
+                                      help="El token de su invitación por correo electrónico")
+            
+            reg_submitted = st.form_submit_button("Completar Registro", use_container_width=True)
+            
+            if reg_submitted:
+                if not reg_email or not reg_password or not reg_password_confirm or not token_input:
+                    add_notification("Por favor, complete todos los campos", "error")
+                elif reg_password != reg_password_confirm:
+                    add_notification("Las contraseñas no coinciden", "error")
+                else:
+                    with st.spinner("Procesando registro..."):
+                        # Call registration API
+                        try:
+                            import requests
+                            
+                            response = requests.post(
+                                f"{API_URL}/auth/register",
+                                params={"token": token_input},
+                                json={"email": reg_email, "password": reg_password}
+                            )
+                            
+                            if response.status_code == 200:
+                                # Registration successful, log in user
+                                token_data = response.json()
+                                st.session_state.token = token_data["access_token"]
+                                add_notification("Registro completado correctamente", "success")
+                                st.session_state.current_page = "dashboard"
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                error_msg = response.json().get("detail", "Error en el registro")
+                                add_notification(f"Error: {error_msg}", "error")
+                        except Exception as e:
+                            add_notification(f"Error de conexión: {str(e)}", "error")
 
 
 # ----- Confirmación modal -----
@@ -422,7 +501,6 @@ def main():
                 categories.render()
             elif page == "expenses":
                 from pages import expenses
-
                 expenses.render()
             elif page == "apikeys":
                 from pages import apikeys

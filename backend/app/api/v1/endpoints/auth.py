@@ -1,16 +1,17 @@
 from datetime import timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
 from app.core.config import settings
-from app.core.security import create_access_token, verify_password, get_password_hash
+from app.core.security import create_access_token, verify_password, get_password_hash, verify_invitation_token
 from app.models.user import User
+from app.models.company import Company
 from app.schemas.token import Token
-from app.schemas.user import User as UserSchema, UserUpdate
+from app.schemas.user import User as UserSchema, UserUpdate, UserRegister
 
 router = APIRouter()
 
@@ -70,3 +71,60 @@ def update_user_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/register", response_model=Token)
+def register_new_user(
+    *,
+    db: Session = Depends(get_db),
+    token: str = Query(..., description="Invitation token"),
+    user_in: UserRegister = Body(...),
+) -> Any:
+    """
+    Register a new user with an invitation token.
+    """
+    # Verify the invitation token
+    email = verify_invitation_token(token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired invitation token",
+        )
+    
+    # Check if the email matches the token
+    if email != user_in.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email does not match the invitation",
+        )
+    
+    # Check if the user already exists and is active
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found. The invitation may have been revoked.",
+        )
+    
+    if user.is_active and user.hashed_password != "PENDING_REGISTRATION":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User has already completed registration",
+        )
+    
+    # Update the user with the new password
+    user.hashed_password = get_password_hash(user_in.password)
+    user.is_active = True
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    # Generate access token
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    return {
+        "access_token": create_access_token(
+            user.id, user.company_id, user.is_admin, expires_delta=access_token_expires
+        ),
+        "token_type": "bearer",
+    }

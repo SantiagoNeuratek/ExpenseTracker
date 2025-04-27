@@ -90,39 +90,39 @@ def invite_user(
 
     # Verificar que el usuario no exista ya
     existing_user = db.query(User).filter(User.email == email).first()
-    if existing_user:
+    if existing_user and existing_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El usuario ya existe en el sistema",
         )
 
-    # Generar una contraseña temporal
-    temp_password = (
-        "ChangeMe123!"  # En producción, usar algo como secrets.token_urlsafe(8)
-    )
-
-    # Crear usuario con contraseña temporal
-    user_in = UserCreate(
-        email=email, password=temp_password, company_id=company_id, is_admin=False
-    )
-
-    # Crear usuario en base de datos
-    user = User(
-        email=user_in.email,
-        hashed_password=get_password_hash(user_in.password),
-        company_id=user_in.company_id,
-        is_admin=user_in.is_admin,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    # Create user with pending registration status
+    if existing_user:
+        # User exists but isn't active - update their company
+        existing_user.company_id = company_id
+        db.add(existing_user)
+        db.commit()
+        db.refresh(existing_user)
+        user = existing_user
+    else:
+        # Create a new user with PENDING_REGISTRATION status
+        user = User(
+            email=email,
+            hashed_password="PENDING_REGISTRATION",  # Placeholder until user completes registration
+            company_id=company_id,
+            is_admin=False,
+            is_active=False,  # Will be set to True when they complete registration
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
     # Enviar email de invitación
     send_new_account_email(
         email_to=user.email,
         company_name=company.name,
         username=user.email,
-        password=temp_password,
+        password="",  # No longer needed as we're using invitation links
     )
 
     return {"status": "success", "message": f"Invitación enviada a {email}"}

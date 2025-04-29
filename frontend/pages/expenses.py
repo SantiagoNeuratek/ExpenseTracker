@@ -318,20 +318,32 @@ def render():
                         hide_index=True,
                         use_container_width=True,
                         column_config={
+                            "Fecha": st.column_config.DateColumn(
+                                "Fecha",
+                                help="Fecha del gasto",
+                                format="DD/MM/YYYY",
+                                width="small"
+                            ),
                             "Descripción": st.column_config.TextColumn(
                                 "Descripción",
-                                width="large",
+                                help="Descripción del gasto",
+                                max_chars=200,
+                                width="large"
                             ),
                             "Categoría": st.column_config.TextColumn(
                                 "Categoría",
-                                width="medium",
+                                help="Categoría del gasto",
+                                max_chars=50,
+                                width="medium"
                             ),
-                            "Monto": st.column_config.TextColumn(
+                            "Monto": st.column_config.NumberColumn(
                                 "Monto",
-                                width="small",
-                            ),
+                                help="Monto del gasto",
+                                format="$%.2f",
+                                width="small"
+                            )
                         },
-                        height=400,
+                        height=400
                     )
 
                     # Información sobre paginación y total

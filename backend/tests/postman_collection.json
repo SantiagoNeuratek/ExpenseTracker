@@ -1,0 +1,276 @@
+{
+    "info": {
+      "name": "ExpenseTracker API",
+      "description": "API para la gestión de gastos empresariales",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Auth",
+        "item": [
+          {
+            "name": "Login",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/x-www-form-urlencoded"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/auth/login",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "auth", "login"]
+              },
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  {
+                    "key": "username",
+                    "value": "admin@example.com",
+                    "type": "text"
+                  },
+                  {
+                    "key": "password",
+                    "value": "admin123",
+                    "type": "text"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "Get Current User",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/auth/me",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "auth", "me"]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Companies",
+        "item": [
+          {
+            "name": "Create Company",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/companies",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "companies"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"Mi Empresa\",\n    \"address\": \"Calle Principal 123\",\n    \"website\": \"https://miempresa.com\",\n    \"logo\": \"base64_encoded_logo\"\n}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Categories",
+        "item": [
+          {
+            "name": "Get Categories",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/categories",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "categories"]
+              }
+            }
+          },
+          {
+            "name": "Get Category by ID",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/categories/{{category_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "categories", "{{category_id}}"]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Expenses",
+        "item": [
+          {
+            "name": "Get Expenses",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses?start_date={{start_date}}&end_date={{end_date}}&category_id={{category_id}}&page={{page}}&page_size={{page_size}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses"],
+                "query": [
+                  {
+                    "key": "start_date",
+                    "value": "{{start_date}}"
+                  },
+                  {
+                    "key": "end_date",
+                    "value": "{{end_date}}"
+                  },
+                  {
+                    "key": "category_id",
+                    "value": "{{category_id}}"
+                  },
+                  {
+                    "key": "page",
+                    "value": "{{page}}"
+                  },
+                  {
+                    "key": "page_size",
+                    "value": "{{page_size}}"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "Get Top Categories",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "API-Key",
+                  "value": "{{api_key}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses/top-categories",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses", "top-categories"]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "API Keys",
+        "item": [
+          {
+            "name": "Get API Keys",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/apikeys",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "apikeys"]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Monitoring",
+        "item": [
+          {
+            "name": "Health Check",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{base_url}}/api/v1/monitoring/health",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "monitoring", "health"]
+              }
+            }
+          },
+          {
+            "name": "Readiness Check",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{base_url}}/api/v1/monitoring/readiness",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "monitoring", "readiness"]
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "variable": [
+      {
+        "key": "base_url",
+        "value": "http://localhost:8000"
+      },
+      {
+        "key": "access_token",
+        "value": "your_access_token_here"
+      },
+      {
+        "key": "api_key",
+        "value": "your_api_key_here"
+      },
+      {
+        "key": "category_id",
+        "value": "1"
+      },
+      {
+        "key": "start_date",
+        "value": "2024-01-01"
+      },
+      {
+        "key": "end_date",
+        "value": "2024-12-31"
+      },
+      {
+        "key": "page",
+        "value": "1"
+      },
+      {
+        "key": "page_size",
+        "value": "10"
+      }
+    ]
+  }

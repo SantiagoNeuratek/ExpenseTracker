@@ -112,16 +112,47 @@ def render():
         # Obtener categorías con caché
         with st.spinner("Cargando categorías..."):
             categories = get_cached_categories()
+            
+            # Asegurarse de que categories sea una lista
+            if not isinstance(categories, list):
+                categories = []
+
+            # Validar la estructura de cada categoría
+            valid_categories = []
+            for cat in categories:
+                if isinstance(cat, dict):
+                    # Asegurarse de que todos los campos necesarios existan
+                    category_data = {
+                        'id': int(cat.get('id', 0)),
+                        'name': str(cat.get('name', 'Sin nombre')),
+                        'description': str(cat.get('description', 'Sin descripción')),
+                        'expense_limit': float(cat.get('expense_limit', 0)) if cat.get('expense_limit') is not None else 0
+                    }
+                    valid_categories.append(category_data)
+
+            categories = valid_categories
 
         if categories:
             # Mejorar el aspecto de la tabla con más información útil
             df = pd.DataFrame(categories)
+            
+            # Asegurarse de que todas las columnas necesarias existan
+            required_columns = ['id', 'name', 'description', 'expense_limit']
+            for col in required_columns:
+                if col not in df.columns:
+                    df[col] = None
+            
             # Manejar valores nulos para evitar errores
-            df = df.fillna({"expense_limit": 0, "description": "Sin descripción"})
+            df = df.fillna({
+                "expense_limit": 0, 
+                "description": "Sin descripción",
+                "name": "Sin nombre",
+                "id": 0
+            })
 
             # Formatear columnas para mejor visualización
             df["expense_limit"] = df["expense_limit"].apply(
-                lambda x: f"${x:.2f}" if x > 0 else "Sin límite"
+                lambda x: f"${float(x):.2f}" if x and float(x) > 0 else "Sin límite"
             )
 
             # Organizar columnas
@@ -134,16 +165,33 @@ def render():
                 hide_index=True,
                 use_container_width=True,
                 column_config={
+                    "ID": st.column_config.NumberColumn(
+                        "ID",
+                        help="Identificador único",
+                        min_value=0,
+                        format="%d",
+                        step=1,
+                        width="small"
+                    ),
                     "Nombre": st.column_config.TextColumn(
-                        "Nombre", help="Nombre de la categoría", width="medium"
+                        "Nombre",
+                        help="Nombre de la categoría",
+                        max_chars=50,
+                        width="medium"
                     ),
                     "Descripción": st.column_config.TextColumn(
-                        "Descripción", help="Descripción detallada", width="large"
+                        "Descripción",
+                        help="Descripción detallada",
+                        max_chars=200,
+                        width="large"
                     ),
                     "Límite de Gasto": st.column_config.TextColumn(
-                        "Límite de Gasto", help="Monto máximo permitido", width="medium"
-                    ),
-                },
+                        "Límite de Gasto",
+                        help="Monto máximo permitido",
+                        max_chars=20,
+                        width="medium"
+                    )
+                }
             )
 
             # Sección para editar y eliminar separados en expanders

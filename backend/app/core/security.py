@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Union
+from typing import Any, Union, Optional
 from jose import jwt
 from passlib.context import CryptContext
 import secrets
@@ -60,7 +60,7 @@ def verify_api_key(plain_api_key: str, hashed_api_key: str) -> bool:
 
 # Función para generar un token de acceso JWT
 def create_access_token(
-    subject: Union[str, Any], company_id: int, is_admin: bool, expires_delta: timedelta = None
+    subject: Union[str, Any], company_id: Optional[int], is_admin: bool, expires_delta: timedelta = None
 ) -> str:
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -71,9 +71,13 @@ def create_access_token(
     to_encode = {
         "exp": expire,
         "sub": str(subject),
-        "company_id": company_id,
         "is_admin": is_admin
     }
+    
+    # Solo incluir company_id si existe (los admins pueden no tener company_id)
+    if company_id is not None:
+        to_encode["company_id"] = company_id
+    
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
     return encoded_jwt
 

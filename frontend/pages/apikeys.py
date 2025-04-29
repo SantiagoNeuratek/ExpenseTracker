@@ -1,29 +1,58 @@
 import streamlit as st
 import pandas as pd
 import time
+from typing import List, Dict, Any
 
 # Importar desde utils.core
 from utils.core import get_api_client
 
+# Definir estructura de datos por defecto
+DEFAULT_API_KEY = {
+    "id": 0,
+    "name": "",
+    "created_at": "",
+    "is_active": False,
+    "key_hash": "",
+    "user_id": 0,
+    "company_id": 0
+}
 
 # Caché para mejorar rendimiento
 @st.cache_data(ttl=60)
-def get_api_keys():
+def get_api_keys() -> List[Dict[str, Any]]:
     """Obtener todas las API keys del usuario."""
-    client = get_api_client()
-    response = client.get("apikeys")
+    try:
+        client = get_api_client()
+        response = client.get("apikeys")
 
-    if "error" in response:
+        if isinstance(response, dict) and "error" in response:
+            st.session_state.notifications.append(
+                {
+                    "id": time.time(),
+                    "message": f"Error al obtener API keys: {response['error']}",
+                    "type": "error",
+                }
+            )
+            return []
+
+        # Validar y normalizar cada API key
+        validated_keys = []
+        for key in response if isinstance(response, list) else []:
+            if isinstance(key, dict):
+                validated_key = DEFAULT_API_KEY.copy()
+                validated_key.update(key)
+                validated_keys.append(validated_key)
+
+        return validated_keys
+    except Exception as e:
         st.session_state.notifications.append(
             {
                 "id": time.time(),
-                "message": f"Error al obtener API keys: {response['error']}",
+                "message": f"Error inesperado al obtener API keys: {str(e)}",
                 "type": "error",
             }
         )
         return []
-
-    return response
 
 
 def render():
@@ -36,6 +65,8 @@ def render():
         st.session_state.key_to_delete = None
     if "new_key_value" not in st.session_state:
         st.session_state.new_key_value = None
+    if "notifications" not in st.session_state:
+        st.session_state.notifications = []
 
     # Funciones específicas de API Keys
     def create_api_key(name):
@@ -121,36 +152,72 @@ def render():
                     time.sleep(0.5)  # Pequeña pausa para mejor feedback visual
                     st.rerun()
 
-        # Obtener API keys
+        # Obtener API keys con manejo de errores mejorado
         with st.spinner("Cargando API keys..."):
             api_keys = get_api_keys()
+            
+            if not isinstance(api_keys, list):
+                st.error("Error al cargar las API keys")
+                return
 
         if api_keys:
-            # Formatear datos para la tabla
-            df = pd.DataFrame(api_keys)
-            df["created_at"] = pd.to_datetime(df["created_at"]).dt.strftime(
-                "%Y-%m-%d %H:%M"
-            )
-            # Formatear estado para mejor visualización
-            df["status"] = df["is_active"].apply(
-                lambda x: "✅ Activa" if x else "❌ Inactiva"
-            )
-            display_df = df[["id", "name", "created_at", "status"]]
-            display_df.columns = ["ID", "Nombre", "Fecha de Creación", "Estado"]
+            try:
+                # Formatear datos para la tabla con validación
+                df = pd.DataFrame([
+                    {
+                        "id": key.get("id", 0),
+                        "name": key.get("name", "Sin nombre"),
+                        "created_at": key.get("created_at", ""),
+                        "is_active": key.get("is_active", False)
+                    }
+                    for key in api_keys
+                ])
+                
+                # Asegurar que todas las columnas necesarias existan
+                required_columns = ["id", "name", "created_at", "is_active"]
+                for col in required_columns:
+                    if col not in df.columns:
+                        df[col] = None
+                
+                # Formatear fechas con manejo de errores
+                df["created_at"] = pd.to_datetime(df["created_at"], errors='coerce').dt.strftime("%Y-%m-%d %H:%M")
+                
+                # Formatear estado para mejor visualización
+                df["status"] = df["is_active"].apply(
+                    lambda x: "✅ Activa" if x else "❌ Inactiva"
+                )
+                
+                display_df = df[["id", "name", "created_at", "status"]]
+                display_df.columns = ["ID", "Nombre", "Fecha de Creación", "Estado"]
 
-            # Mostrar tabla con mejores opciones
-            st.dataframe(
-                display_df,
-                hide_index=True,
-                use_container_width=True,
-                column_config={
-                    "Nombre": st.column_config.TextColumn("Nombre", width="medium"),
-                    "Fecha de Creación": st.column_config.TextColumn(
-                        "Fecha de Creación", width="medium"
-                    ),
-                    "Estado": st.column_config.TextColumn("Estado", width="small"),
-                },
-            )
+                # Mostrar tabla con mejores opciones y manejo de errores
+                st.dataframe(
+                    display_df,
+                    hide_index=True,
+                    use_container_width=True,
+                    column_config={
+                        "ID": st.column_config.NumberColumn(
+                            "ID",
+                            help="Identificador único",
+                            width="small"
+                        ),
+                        "Nombre": st.column_config.TextColumn(
+                            "Nombre",
+                            width="medium"
+                        ),
+                        "Fecha de Creación": st.column_config.TextColumn(
+                            "Fecha de Creación",
+                            width="medium"
+                        ),
+                        "Estado": st.column_config.TextColumn(
+                            "Estado",
+                            width="small"
+                        ),
+                    }
+                )
+            except Exception as e:
+                st.error(f"Error al mostrar la tabla de API keys: {str(e)}")
+                return
 
             # Sección para desactivar API Keys
             st.subheader("Desactivar API Key")

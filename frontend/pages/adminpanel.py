@@ -286,7 +286,38 @@ def display_companies_tab():
                 # Format the table
                 companies_df = companies_df[["id", "name", "website", "created_at"]]
                 companies_df.columns = ["ID", "Nombre", "Sitio Web", "Fecha de Registro"]
-                st.dataframe(companies_df, use_container_width=True)
+                st.dataframe(
+                    companies_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "ID": st.column_config.NumberColumn(
+                            "ID",
+                            help="Identificador único",
+                            min_value=0,
+                            format="%d",
+                            width="small"
+                        ),
+                        "Nombre": st.column_config.TextColumn(
+                            "Nombre",
+                            help="Nombre de la empresa",
+                            max_chars=100,
+                            width="large"
+                        ),
+                        "Sitio Web": st.column_config.TextColumn(
+                            "Sitio Web",
+                            help="URL del sitio web",
+                            max_chars=200,
+                            width="medium"
+                        ),
+                        "Fecha de Registro": st.column_config.DateColumn(
+                            "Fecha de Registro",
+                            help="Fecha de creación",
+                            format="DD/MM/YYYY HH:mm",
+                            width="medium"
+                        )
+                    }
+                )
     
     with col2:
         # Company registration form

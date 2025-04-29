@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, DateTime, Text, Index
+from sqlalchemy import Column, String, Integer, Float, ForeignKey, DateTime, Text, Index, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -16,12 +16,13 @@ class Expense(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Fecha de registro
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    is_active = Column(Boolean, default=True, nullable=False)  # Para borrado lógico
     
     # Relaciones
     category = relationship("Category", back_populates="expenses")
     user = relationship("User", back_populates="expenses")
     company = relationship("Company", back_populates="expenses")
-    audit_records = relationship("AuditRecord", back_populates="expense")
+    audit_records = relationship("AuditRecord", back_populates="expense", passive_deletes=True)
 
     # Indexes for better query performance
     __table_args__ = (

@@ -43,14 +43,42 @@ def get_categories():
     if not is_authenticated():
         return []
 
-    client = get_api_client()
-    response = client.get("categories")
+    try:
+        client = get_api_client()
+        response = client.get("categories")
 
-    if "error" in response:
-        st.error(f"Error al obtener categorías: {response['error']}")
+        if "error" in response:
+            st.error(f"Error al obtener categorías: {response['error']}")
+            return []
+
+        # Asegurarse de que response sea una lista
+        if not isinstance(response, list):
+            return []
+
+        # Validar la estructura de cada categoría
+        valid_categories = []
+        for cat in response:
+            if isinstance(cat, dict):
+                try:
+                    # Asegurarse de que todos los campos necesarios existan con valores por defecto
+                    category_data = {
+                        'id': int(cat.get('id', 0)),
+                        'name': str(cat.get('name', 'Sin nombre')),
+                        'description': str(cat.get('description', 'Sin descripción')),
+                        'expense_limit': float(cat.get('expense_limit', 0)) if cat.get('expense_limit') is not None else 0,
+                        'is_active': bool(cat.get('is_active', True)),
+                        'created_at': cat.get('created_at', ''),
+                        'company_id': int(cat.get('company_id', 0))
+                    }
+                    valid_categories.append(category_data)
+                except (ValueError, TypeError) as e:
+                    st.warning(f"Error al procesar categoría: {str(e)}")
+                    continue
+
+        return valid_categories
+    except Exception as e:
+        st.error(f"Error al obtener categorías: {str(e)}")
         return []
-
-    return response
 
 
 def get_expenses(

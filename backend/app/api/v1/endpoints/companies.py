@@ -14,6 +14,19 @@ from app.utils.email import send_new_account_email
 router = APIRouter()
 
 
+@router.get("", response_model=List[CompanySchema])
+def list_companies(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+) -> Any:
+    """
+    Obtener todas las empresas.
+    Solo accesible para administradores.
+    """
+    companies = db.query(Company).order_by(Company.name).all()
+    return companies
+
+
 @router.post("", response_model=CompanySchema)
 def create_company(
     *,
@@ -118,11 +131,24 @@ def invite_user(
         db.refresh(user)
 
     # Enviar email de invitación
-    send_new_account_email(
+    email_sent = send_new_account_email(
         email_to=user.email,
         company_name=company.name,
         username=user.email,
         password="",  # No longer needed as we're using invitation links
     )
-
-    return {"status": "success", "message": f"Invitación enviada a {email}"}
+    
+    # Respuesta con estado del envío de correo
+    if email_sent:
+        return {
+            "status": "success", 
+            "message": f"Invitación enviada exitosamente a {email}",
+            "email_sent": True
+        }
+    else:
+        # El usuario fue creado, pero el correo no se envió
+        return {
+            "status": "partial_success",
+            "message": f"Usuario {email} creado, pero hubo un problema al enviar el correo de invitación. Verifica la configuración SMTP.",
+            "email_sent": False
+        }

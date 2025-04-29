@@ -10,7 +10,7 @@ class UserBase(BaseModel):
 # Esquema para crear un usuario (desde la API)
 class UserCreate(UserBase):
     password: str
-    company_id: int
+    company_id: Optional[int] = None
 
 # Esquema para crear un usuario por invitación
 class UserInvite(BaseModel):
@@ -21,12 +21,13 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     password: str | None = None
     is_admin: bool | None = None
+    company_id: int | None = None
 
 # Esquema para la respuesta de usuario
 class User(UserBase):
     id: int
     is_active: bool
-    company_id: int
+    company_id: Optional[int] = None
 
     class Config:
         from_attributes = True

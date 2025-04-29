@@ -136,7 +136,37 @@ def render():
                 display_df.columns = ["Email", "Rol", "Estado"]
 
             # Mostrar tabla con mejores opciones
-            st.dataframe(display_df, hide_index=True, use_container_width=True)
+            st.dataframe(
+                display_df,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "Email": st.column_config.TextColumn(
+                        "Email",
+                        help="Correo electrónico del usuario",
+                        max_chars=100,
+                        width="large"
+                    ),
+                    "Rol": st.column_config.TextColumn(
+                        "Rol",
+                        help="Rol del usuario en el sistema",
+                        max_chars=50,
+                        width="small"
+                    ),
+                    "Estado": st.column_config.TextColumn(
+                        "Estado",
+                        help="Estado actual del usuario",
+                        max_chars=20,
+                        width="small"
+                    ),
+                    "Fecha de Registro": st.column_config.DateColumn(
+                        "Fecha de Registro",
+                        help="Fecha de creación de la cuenta",
+                        format="DD/MM/YYYY HH:mm",
+                        width="medium"
+                    )
+                }
+            )
 
             # Estadísticas básicas
             st.subheader("Estadísticas")

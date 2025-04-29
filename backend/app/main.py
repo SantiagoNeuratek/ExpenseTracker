@@ -195,15 +195,15 @@ async def request_middleware(request: Request, call_next):
         
         # Log exceptions with full context
         logger.error(
-            f"Request failed: {method} {path}",
-            data={
+            f"Request failed: {method} {path} - Error: {error_type}: {error_msg}",
+            extra={
                 "path": path,
                 "method": method,
                 "query": query_params,
                 "error_type": error_type,
                 "error_message": error_msg,
+                "duration_ms": duration_ms
             },
-            duration_ms=duration_ms,
             exc_info=e
         )
         

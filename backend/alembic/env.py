@@ -19,12 +19,10 @@ from app.models.audit import AuditRecord
 config = context.config
 
 # Configurar la URL de la base de datos desde las variables de entorno
-database_url = os.environ.get("SQLALCHEMY_DATABASE_URI", 
-    f"postgresql://{os.environ.get('POSTGRES_USER', 'postgres')}:"
-    f"{os.environ.get('POSTGRES_PASSWORD', 'postgres')}@"
-    f"{os.environ.get('POSTGRES_SERVER', 'db')}:"
-    f"5432/{os.environ.get('POSTGRES_DB', 'expense_tracker')}"
-)
+database_url = os.environ.get("SQLALCHEMY_DATABASE_URI")
+if not database_url:
+    database_url = f"postgresql://{os.environ.get('POSTGRES_USER', 'postgres')}:{os.environ.get('POSTGRES_PASSWORD', 'postgres')}@{os.environ.get('POSTGRES_SERVER', 'localhost')}:5433/{os.environ.get('POSTGRES_DB', 'expense_tracker')}"
+
 config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpreta el archivo config, que debe estar presente

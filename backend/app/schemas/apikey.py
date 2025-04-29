@@ -15,6 +15,7 @@ class ApiKey(ApiKeyBase):
     id: int
     is_active: bool
     created_at: datetime
+    key_preview: Optional[str] = None  # Versión enmascarada/truncada de la clave
 
     class Config:
         from_attributes = True

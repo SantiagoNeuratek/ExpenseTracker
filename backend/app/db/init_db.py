@@ -81,12 +81,12 @@ def init_db(db: Session) -> None:
             db.add(company)
             db.flush()
         
-        # Crear usuario admin
+        # Crear usuario admin sin company_id
         admin_user = User(
             email="admin@saas.com",
             hashed_password=get_password_hash("Password1"),
             is_admin=True,
-            company_id=company.id,
+            company_id=None,  # Admin global sin empresa asignada
         )
         db.add(admin_user)
 

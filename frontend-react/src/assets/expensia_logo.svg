@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+  <style>
+    .logo-text { font-family: Arial, sans-serif; font-weight: bold; }
+    .text-main { fill: #0066cc; }
+    .text-accent { fill: #00aaff; }
+    .icon { fill: #0088e6; }
+  </style>
+  <g>
+    <text x="60" y="40" class="logo-text text-main" font-size="24">EXPEN</text>
+    <text x="136" y="40" class="logo-text text-accent" font-size="24">SIA</text>
+    <path class="icon" d="M20,15 C16.13,15 13,18.13 13,22 C13,25.87 16.13,29 20,29 C23.87,29 27,25.87 27,22 C27,18.13 23.87,15 20,15 Z M29,37 L11,37 C9.9,37 9,37.9 9,39 L9,41 C9,41.55 9.45,42 10,42 L30,42 C30.55,42 31,41.55 31,41 L31,39 C31,37.9 30.1,37 29,37 Z M40,30 L33,30 L33,32 L40,32 L40,35 L47,30 L40,25 Z"/>
+    <text x="60" y="50" font-size="10" fill="#666">Gestión de Gastos</text>
+  </g>
+</svg> 

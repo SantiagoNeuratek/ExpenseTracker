@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, get_company_id
 from app.models.category import Category
 from app.models.user import User
 from app.schemas.category import (
@@ -21,15 +21,16 @@ def read_categories(
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_user),
+    company_id: int = Depends(get_company_id),
 ) -> Any:
     """
-    Obtener todas las categorías de la empresa del usuario.
+    Obtener todas las categorías de la empresa seleccionada.
     """
     categories = (
         db.query(Category)
         .filter(
             and_(
-                Category.company_id == current_user.company_id,
+                Category.company_id == company_id,
                 Category.is_active == True,
             )
         )
@@ -46,6 +47,7 @@ def create_category(
     db: Session = Depends(get_db),
     category_in: CategoryCreate,
     current_user: User = Depends(get_current_user),
+    company_id: int = Depends(get_company_id),
 ) -> Any:
     """
     Crear una nueva categoría.
@@ -56,7 +58,7 @@ def create_category(
         .filter(
             and_(
                 Category.name == category_in.name,
-                Category.company_id == current_user.company_id,
+                Category.company_id == company_id,
                 Category.is_active == True,
             )
         )
@@ -74,7 +76,7 @@ def create_category(
         name=category_in.name,
         description=category_in.description,
         expense_limit=category_in.expense_limit,
-        company_id=current_user.company_id,
+        company_id=company_id,
     )
     db.add(category)
     db.commit()
@@ -88,6 +90,7 @@ def read_category(
     category_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    company_id: int = Depends(get_company_id),
 ) -> Any:
     """
     Obtener una categoría por ID.
@@ -97,7 +100,7 @@ def read_category(
         .filter(
             and_(
                 Category.id == category_id,
-                Category.company_id == current_user.company_id,
+                Category.company_id == company_id,
                 Category.is_active == True,
             )
         )
@@ -119,6 +122,7 @@ def update_category(
     category_id: int,
     category_in: CategoryUpdate,
     current_user: User = Depends(get_current_user),
+    company_id: int = Depends(get_company_id),
 ) -> Any:
     """
     Actualizar una categoría.
@@ -128,7 +132,7 @@ def update_category(
         .filter(
             and_(
                 Category.id == category_id,
-                Category.company_id == current_user.company_id,
+                Category.company_id == company_id,
                 Category.is_active == True,
             )
         )
@@ -147,7 +151,7 @@ def update_category(
             .filter(
                 and_(
                     Category.name == category_in.name,
-                    Category.company_id == current_user.company_id,
+                    Category.company_id == company_id,
                     Category.id != category_id,
                     Category.is_active == True,
                 )
@@ -182,6 +186,7 @@ def delete_category(
     db: Session = Depends(get_db),
     category_id: int,
     current_user: User = Depends(get_current_user),
+    company_id: int = Depends(get_company_id),
 ) -> Any:
     """
     Eliminación lógica de una categoría.
@@ -191,7 +196,7 @@ def delete_category(
         .filter(
             and_(
                 Category.id == category_id,
-                Category.company_id == current_user.company_id,
+                Category.company_id == company_id,
                 Category.is_active == True,
             )
         )

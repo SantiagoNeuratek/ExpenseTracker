@@ -7,5 +7,5 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     sub: Optional[int] = None
-    company_id: int
+    company_id: Optional[int] = None
     is_admin: bool

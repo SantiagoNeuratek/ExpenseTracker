@@ -74,6 +74,131 @@ def read_expenses(
     return response
 
 
+@router.get("/top-categories", response_model=List[TopCategory])
+def get_top_categories(
+    db: Session = Depends(get_db),
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    limit: int = Query(5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
+    company_id: int = Depends(get_company_id),
+) -> Any:
+    """
+    Obtener las categorías con más gastos en un período.
+    """
+    result = (
+        db.query(
+            Category.id,
+            Category.name,
+            func.sum(Expense.amount).label("total_amount"),
+        )
+        .join(Expense, Category.id == Expense.category_id)
+        .filter(
+            and_(
+                Expense.company_id == company_id,
+                Expense.date_incurred >= start_date,
+                Expense.date_incurred <= end_date,
+                Expense.is_active == True,
+            )
+        )
+        .group_by(Category.id, Category.name)
+        .order_by(func.sum(Expense.amount).desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {"id": row[0], "name": row[1], "total_amount": float(row[2])} for row in result
+    ]
+
+
+@router.get("/by-category", response_model=List[ExpenseSchema])
+def get_expenses_by_category(
+    category_id: int,
+    start_date: date,
+    end_date: date,
+    db: Session = Depends(get_db),
+    company_id: int = Depends(get_api_key_company),
+) -> Any:
+    """
+    Obtener gastos por categoría y período.
+    Este endpoint público requiere una API KEY válida para identificar la empresa.
+    """
+    # Verificar que la categoría existe y pertenece a la empresa
+    category = (
+        db.query(Category)
+        .filter(
+            and_(
+                Category.id == category_id,
+                Category.company_id == company_id,
+                Category.is_active == True,
+            )
+        )
+        .first()
+    )
+
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Categoría no encontrada"
+        )
+
+    # Obtener los gastos
+    expenses = (
+        db.query(Expense)
+        .filter(
+            and_(
+                Expense.category_id == category_id,
+                Expense.company_id == company_id,
+                Expense.date_incurred >= start_date,
+                Expense.date_incurred <= end_date,
+                Expense.is_active == True,
+            )
+        )
+        .order_by(Expense.date_incurred.desc())
+        .all()
+    )
+
+    # Agregar categoría para la respuesta
+    for expense in expenses:
+        setattr(expense, "category_name", category.name)
+
+    return expenses
+
+
+@router.get("/top-categories-history", response_model=List[TopCategory])
+def get_top_categories_history(
+    db: Session = Depends(get_db),
+    company_id: int = Depends(get_api_key_company),
+    limit: int = Query(3, description="Número de categorías a devolver"),
+) -> Any:
+    """
+    Obtener las 3 categorías con más gastos acumulados de la historia para la empresa.
+    Este endpoint público requiere una API KEY válida para identificar la empresa.
+    """
+    result = (
+        db.query(
+            Category.id,
+            Category.name,
+            func.sum(Expense.amount).label("total_amount"),
+        )
+        .join(Expense, Category.id == Expense.category_id)
+        .filter(
+            and_(
+                Expense.company_id == company_id,
+                Expense.is_active == True,
+            )
+        )
+        .group_by(Category.id, Category.name)
+        .order_by(func.sum(Expense.amount).desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {"id": row[0], "name": row[1], "total_amount": float(row[2])} for row in result
+    ]
+
+
 @router.get("/{expense_id}", response_model=ExpenseSchema)
 def read_expense(
     *,
@@ -367,128 +492,3 @@ def delete_expense(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al eliminar el gasto: {str(e)}"
         )
-
-
-@router.get("/top-categories", response_model=List[TopCategory])
-def get_top_categories(
-    db: Session = Depends(get_db),
-    start_date: date = Query(...),
-    end_date: date = Query(...),
-    limit: int = Query(5, ge=1, le=20),
-    current_user: User = Depends(get_current_user),
-    company_id: int = Depends(get_company_id),
-) -> Any:
-    """
-    Obtener las categorías con más gastos en un período.
-    """
-    result = (
-        db.query(
-            Category.id,
-            Category.name,
-            func.sum(Expense.amount).label("total_amount"),
-        )
-        .join(Expense, Category.id == Expense.category_id)
-        .filter(
-            and_(
-                Expense.company_id == company_id,
-                Expense.date_incurred >= start_date,
-                Expense.date_incurred <= end_date,
-                Expense.is_active == True,
-            )
-        )
-        .group_by(Category.id, Category.name)
-        .order_by(func.sum(Expense.amount).desc())
-        .limit(limit)
-        .all()
-    )
-
-    return [
-        {"id": row[0], "name": row[1], "total_amount": float(row[2])} for row in result
-    ]
-
-
-@router.get("/by-category", response_model=List[ExpenseSchema])
-def get_expenses_by_category(
-    category_id: int,
-    start_date: date,
-    end_date: date,
-    db: Session = Depends(get_db),
-    company_id: int = Depends(get_api_key_company),
-) -> Any:
-    """
-    Obtener gastos por categoría y período.
-    Este endpoint público requiere una API KEY válida para identificar la empresa.
-    """
-    # Verificar que la categoría existe y pertenece a la empresa
-    category = (
-        db.query(Category)
-        .filter(
-            and_(
-                Category.id == category_id,
-                Category.company_id == company_id,
-                Category.is_active == True,
-            )
-        )
-        .first()
-    )
-
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Categoría no encontrada"
-        )
-
-    # Obtener los gastos
-    expenses = (
-        db.query(Expense)
-        .filter(
-            and_(
-                Expense.category_id == category_id,
-                Expense.company_id == company_id,
-                Expense.date_incurred >= start_date,
-                Expense.date_incurred <= end_date,
-                Expense.is_active == True,
-            )
-        )
-        .order_by(Expense.date_incurred.desc())
-        .all()
-    )
-
-    # Agregar categoría para la respuesta
-    for expense in expenses:
-        setattr(expense, "category_name", category.name)
-
-    return expenses
-
-
-@router.get("/top-categories-history", response_model=List[TopCategory])
-def get_top_categories_history(
-    db: Session = Depends(get_db),
-    company_id: int = Depends(get_api_key_company),
-    limit: int = Query(3, description="Número de categorías a devolver"),
-) -> Any:
-    """
-    Obtener las 3 categorías con más gastos acumulados de la historia para la empresa.
-    Este endpoint público requiere una API KEY válida para identificar la empresa.
-    """
-    result = (
-        db.query(
-            Category.id,
-            Category.name,
-            func.sum(Expense.amount).label("total_amount"),
-        )
-        .join(Expense, Category.id == Expense.category_id)
-        .filter(
-            and_(
-                Expense.company_id == company_id,
-                Expense.is_active == True,
-            )
-        )
-        .group_by(Category.id, Category.name)
-        .order_by(func.sum(Expense.amount).desc())
-        .limit(limit)
-        .all()
-    )
-
-    return [
-        {"id": row[0], "name": row[1], "total_amount": float(row[2])} for row in result
-    ]

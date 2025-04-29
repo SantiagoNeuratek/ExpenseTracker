@@ -56,12 +56,100 @@
                 "path": ["api", "v1", "auth", "me"]
               }
             }
+          },
+          {
+            "name": "Register User",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/auth/register",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "auth", "register"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"email\": \"nuevo@example.com\",\n    \"password\": \"Password123\",\n    \"full_name\": \"Usuario Nuevo\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Update User",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/auth/me",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "auth", "me"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"full_name\": \"Nombre Actualizado\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Change Password",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/auth/password",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "auth", "password"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"current_password\": \"admin123\",\n    \"new_password\": \"NewPassword123\"\n}"
+              }
+            }
           }
         ]
       },
       {
         "name": "Companies",
         "item": [
+          {
+            "name": "Get Companies",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/companies",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "companies"]
+              }
+            }
+          },
           {
             "name": "Create Company",
             "request": {
@@ -84,6 +172,65 @@
               "body": {
                 "mode": "raw",
                 "raw": "{\n    \"name\": \"Mi Empresa\",\n    \"address\": \"Calle Principal 123\",\n    \"website\": \"https://miempresa.com\",\n    \"logo\": \"base64_encoded_logo\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Get Company by ID",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/companies/{{company_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "companies", "{{company_id}}"]
+              }
+            }
+          },
+          {
+            "name": "Update Company",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/companies/{{company_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "companies", "{{company_id}}"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"Mi Empresa Actualizada\",\n    \"address\": \"Nueva Dirección 456\",\n    \"website\": \"https://miempresa-updated.com\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Delete Company",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/companies/{{company_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "companies", "{{company_id}}"]
               }
             }
           }
@@ -110,9 +257,76 @@
             }
           },
           {
+            "name": "Create Category",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/categories",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "categories"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"Nueva Categoría\",\n    \"description\": \"Descripción de la categoría\",\n    \"color\": \"#FF5733\"\n}"
+              }
+            }
+          },
+          {
             "name": "Get Category by ID",
             "request": {
               "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/categories/{{category_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "categories", "{{category_id}}"]
+              }
+            }
+          },
+          {
+            "name": "Update Category",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/categories/{{category_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "categories", "{{category_id}}"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"Categoría Actualizada\",\n    \"description\": \"Nueva descripción\",\n    \"color\": \"#33FF57\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Delete Category",
+            "request": {
+              "method": "DELETE",
               "header": [
                 {
                   "key": "Authorization",
@@ -171,7 +385,108 @@
             }
           },
           {
+            "name": "Create Expense",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"description\": \"Gasto de prueba\",\n    \"amount\": 150.50,\n    \"date\": \"2024-05-01\",\n    \"category_id\": {{category_id}},\n    \"company_id\": {{company_id}},\n    \"receipt_image\": \"base64_encoded_image\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Get Expense by ID",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses", "{{expense_id}}"]
+              }
+            }
+          },
+          {
+            "name": "Update Expense",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses", "{{expense_id}}"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"description\": \"Gasto actualizado\",\n    \"amount\": 175.25,\n    \"date\": \"2024-05-02\",\n    \"category_id\": {{category_id}}\n}"
+              }
+            }
+          },
+          {
+            "name": "Delete Expense",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses", "{{expense_id}}"]
+              }
+            }
+          },
+          {
             "name": "Get Top Categories",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses/top-categories",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses", "top-categories"]
+              }
+            }
+          },
+          {
+            "name": "Get Expenses by Category",
             "request": {
               "method": "GET",
               "header": [
@@ -181,9 +496,100 @@
                 }
               ],
               "url": {
-                "raw": "{{base_url}}/api/v1/expenses/top-categories",
+                "raw": "{{base_url}}/api/v1/expenses/by-category?start_date={{start_date}}&end_date={{end_date}}",
                 "host": ["{{base_url}}"],
-                "path": ["api", "v1", "expenses", "top-categories"]
+                "path": ["api", "v1", "expenses", "by-category"],
+                "query": [
+                  {
+                    "key": "start_date",
+                    "value": "{{start_date}}"
+                  },
+                  {
+                    "key": "end_date",
+                    "value": "{{end_date}}"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "Get Top Categories History",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "api-key",
+                  "value": "{{api_key}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses/top-categories-history?period={{period}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses", "top-categories-history"],
+                "query": [
+                  {
+                    "key": "period",
+                    "value": "{{period}}"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "Get Monthly Summary",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses/monthly-summary?year={{year}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses", "monthly-summary"],
+                "query": [
+                  {
+                    "key": "year",
+                    "value": "{{year}}"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "Export Expenses",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/expenses/export?format={{export_format}}&start_date={{start_date}}&end_date={{end_date}}&category_id={{category_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "expenses", "export"],
+                "query": [
+                  {
+                    "key": "format",
+                    "value": "{{export_format}}"
+                  },
+                  {
+                    "key": "start_date",
+                    "value": "{{start_date}}"
+                  },
+                  {
+                    "key": "end_date",
+                    "value": "{{end_date}}"
+                  },
+                  {
+                    "key": "category_id",
+                    "value": "{{category_id}}"
+                  }
+                ]
               }
             }
           }
@@ -208,6 +614,73 @@
                 "path": ["api", "v1", "apikeys"]
               }
             }
+          },
+          {
+            "name": "Create API Key",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/apikeys",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "apikeys"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"Mi API Key\",\n    \"expires_at\": \"2025-12-31T23:59:59Z\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Update API Key",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/apikeys/{{apikey_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "apikeys", "{{apikey_id}}"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"API Key Actualizada\",\n    \"expires_at\": \"2026-12-31T23:59:59Z\",\n    \"is_active\": true\n}"
+              }
+            }
+          },
+          {
+            "name": "Delete API Key",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/apikeys/{{apikey_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "apikeys", "{{apikey_id}}"]
+              }
+            }
           }
         ]
       },
@@ -226,6 +699,23 @@
             }
           },
           {
+            "name": "Full Health Check",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{base_url}}/api/v1/monitoring/health?full=true",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "monitoring", "health"],
+                "query": [
+                  {
+                    "key": "full",
+                    "value": "true"
+                  }
+                ]
+              }
+            }
+          },
+          {
             "name": "Readiness Check",
             "request": {
               "method": "GET",
@@ -233,6 +723,68 @@
                 "raw": "{{base_url}}/api/v1/monitoring/readiness",
                 "host": ["{{base_url}}"],
                 "path": ["api", "v1", "monitoring", "readiness"]
+              }
+            }
+          },
+          {
+            "name": "Liveness Check",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{base_url}}/api/v1/monitoring/liveness",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "monitoring", "liveness"]
+              }
+            }
+          },
+          {
+            "name": "Get Metrics",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/monitoring/metrics",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "monitoring", "metrics"]
+              }
+            }
+          },
+          {
+            "name": "Get System Health",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/monitoring/system-health",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "monitoring", "system-health"]
+              }
+            }
+          },
+          {
+            "name": "Get Load Test Results",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/v1/monitoring/load-test-results",
+                "host": ["{{base_url}}"],
+                "path": ["api", "v1", "monitoring", "load-test-results"]
               }
             }
           }
@@ -257,12 +809,36 @@
         "value": "1"
       },
       {
+        "key": "company_id",
+        "value": "1"
+      },
+      {
+        "key": "expense_id",
+        "value": "1"
+      },
+      {
+        "key": "apikey_id",
+        "value": "1"
+      },
+      {
         "key": "start_date",
         "value": "2024-01-01"
       },
       {
         "key": "end_date",
         "value": "2024-12-31"
+      },
+      {
+        "key": "year",
+        "value": "2024"
+      },
+      {
+        "key": "period",
+        "value": "month"
+      },
+      {
+        "key": "export_format",
+        "value": "csv"
       },
       {
         "key": "page",

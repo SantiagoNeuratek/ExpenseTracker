@@ -176,7 +176,7 @@
               "method": "GET",
               "header": [
                 {
-                  "key": "API-Key",
+                  "key": "api-key",
                   "value": "{{api_key}}"
                 }
               ],

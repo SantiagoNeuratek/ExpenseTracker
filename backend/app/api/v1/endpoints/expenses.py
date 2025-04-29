@@ -23,8 +23,10 @@ from app.schemas.expense import (
 )
 from app.schemas.category import TopCategory
 from app.services.audit_service import create_expense_audit
+from app.core.logging import get_logger
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 
 @router.get("", response_model=ExpensePagination)
@@ -85,7 +87,25 @@ def get_top_categories(
 ) -> Any:
     """
     Obtener las categorías con más gastos en un período.
+    Este endpoint implementa caché para mejorar el rendimiento bajo alta carga.
     """
+    import hashlib
+    import json
+    from app.core.cache import cache
+
+    # Crear una clave de caché única basada en los parámetros
+    cache_key = f"top_categories:{company_id}:{start_date}:{end_date}:{limit}"
+    cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()
+    
+    # Intentar obtener resultados de caché
+    cached_result = cache.get(cache_key_hash)
+    if cached_result:
+        logger.debug(f"Cache hit for {cache_key}")
+        return json.loads(cached_result)
+    
+    logger.debug(f"Cache miss for {cache_key}")
+    
+    # Si no hay caché, ejecutar la consulta
     result = (
         db.query(
             Category.id,
@@ -107,9 +127,15 @@ def get_top_categories(
         .all()
     )
 
-    return [
+    # Formatear resultados
+    formatted_result = [
         {"id": row[0], "name": row[1], "total_amount": float(row[2])} for row in result
     ]
+    
+    # Almacenar en caché por 5 minutos (300 segundos)
+    cache.set(cache_key_hash, json.dumps(formatted_result), 300)
+    
+    return formatted_result
 
 
 @router.get("/by-category", response_model=List[ExpenseSchema])

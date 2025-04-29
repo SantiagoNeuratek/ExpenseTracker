@@ -123,7 +123,7 @@ async def request_middleware(request: Request, call_next):
         pass
     
     # Extract API key for public endpoints if available
-    api_key = request.headers.get("API-Key")
+    api_key = request.headers.get("api-key")
     has_auth = bool(auth_header or api_key)
     
     # Extract query parameters and sanitize sensitive ones

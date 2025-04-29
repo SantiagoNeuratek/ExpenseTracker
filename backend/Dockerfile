@@ -45,6 +45,9 @@ RUN if [ "${INSTALL_DEV}" = "true" ] ; then \
 # Install psutil separately in case it's not in poetry dependencies
 RUN pip install psutil
 
+# Hacer ejecutable el script de entrada
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Create non-root user (for better security)
 RUN adduser --disabled-password --gecos "" appuser
 RUN chown -R appuser:appuser /app
@@ -56,6 +59,9 @@ EXPOSE 8000
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8000/api/v1/monitoring/health || exit 1
+
+# Usar el script de entrada
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # Comando para iniciar la aplicación
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

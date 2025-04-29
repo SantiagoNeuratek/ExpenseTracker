@@ -12,8 +12,11 @@ from app.schemas.apikey import (
     ApiKeyCreate,
     ApiKeyCreateResponse,
 )
+from app.core.logging import get_logger
+from app.core.cache import cache
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 
 @router.get("", response_model=List[ApiKeySchema])
@@ -22,7 +25,24 @@ def read_api_keys(
 ) -> Any:
     """
     Obtener todas las API keys del usuario.
+    Este endpoint implementa caché para mejorar el rendimiento bajo alta carga.
     """
+    import hashlib
+    import json
+    
+    # Crear una clave de caché única basada en el usuario
+    cache_key = f"api_keys:{current_user.id}"
+    cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()
+    
+    # Intentar obtener resultados de caché
+    cached_result = cache.get(cache_key_hash)
+    if cached_result:
+        logger.debug(f"Cache hit for {cache_key}")
+        return json.loads(cached_result)
+    
+    logger.debug(f"Cache miss for {cache_key}")
+    
+    # Si no hay caché, ejecutar la consulta
     api_keys = (
         db.query(ApiKey)
         .filter(and_(ApiKey.user_id == current_user.id, ApiKey.is_active == True))
@@ -30,11 +50,33 @@ def read_api_keys(
     )
     
     # Añadir versión truncada de las API keys
+    api_keys_data = []
     for api_key in api_keys:
         # Mostrar solo los primeros 8 y últimos 4 caracteres, enmascarando el resto
         key_hash = api_key.key_hash
+        key_preview = "et_••••••••••"
         if len(key_hash) > 12:  # Asegurarse de que hay suficientes caracteres
             # Los hash tienen 64 caracteres, así que podemos mostrar un formato fijo
+            key_preview = f"et_••••••••••••{key_hash[-4:]}"
+        
+        # Crear diccionario con datos para la caché
+        api_key_data = {
+            "id": api_key.id,
+            "name": api_key.name,
+            "is_active": api_key.is_active,
+            "created_at": api_key.created_at.isoformat(),
+            "key_preview": key_preview
+        }
+        api_keys_data.append(api_key_data)
+    
+    # Almacenar en caché por 2 minutos (120 segundos)
+    # Tiempo corto para que las nuevas claves sean visibles rápidamente
+    cache.set(cache_key_hash, json.dumps(api_keys_data), 120)
+    
+    # Para la respuesta, configuramos los objetos para la serialización normal
+    for api_key in api_keys:
+        key_hash = api_key.key_hash
+        if len(key_hash) > 12:
             api_key.key_preview = f"et_••••••••••••{key_hash[-4:]}"
         else:
             api_key.key_preview = "et_••••••••••"
@@ -84,6 +126,14 @@ def create_new_api_key(
         db.add(api_key)
         db.commit()
         db.refresh(api_key)
+        
+        # Invalida la caché de las API keys del usuario
+        import hashlib
+        cache_key = f"api_keys:{current_user.id}"
+        cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()
+        cache.delete(cache_key_hash)
+        logger.debug(f"Caché invalidada para {cache_key} tras crear API key")
+        
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -135,6 +185,13 @@ def delete_api_key(
 
     db.add(api_key)
     db.commit()
+    
+    # Invalidar la caché de las API keys del usuario
+    import hashlib
+    cache_key = f"api_keys:{current_user.id}"
+    cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()
+    cache.delete(cache_key_hash)
+    logger.debug(f"Caché invalidada para {cache_key} tras desactivar API key")
 
     return {"status": "success", "message": "API key desactivada"}
 

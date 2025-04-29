@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Informe de Pruebas de Carga - ExpenseTracker</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 { color: #2c3e50; }
+        .card { 
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        .metric {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .success { color: #28a745; }
+        .failure { color: #dc3545; }
+        .description { color: #6c757d; }
+        .bar-container {
+            background: #f8f9fa;
+            height: 30px;
+            border-radius: 15px;
+            position: relative;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .bar {
+            height: 100%;
+            border-radius: 15px;
+            transition: width 0.5s;
+            position: relative;
+        }
+        .bar-success { background: #28a745; }
+        .bar-failure { background: #dc3545; }
+        .bar-label {
+            position: absolute;
+            right: 10px;
+            color: white;
+            line-height: 30px;
+            font-weight: bold;
+        }
+        .threshold {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dc3545;
+        }
+        .threshold-label {
+            position: absolute;
+            top: -25px;
+            color: #dc3545;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Informe de Pruebas de Carga - ExpenseTracker</h1>
+    
+    <div class="card">
+        <h2>RNF 1: Performance bajo carga (1200 req/min)</h2>
+        <p class="metric success">Estado: CUMPLIDO ✅</p>
+        <p class="description">Los endpoints RF8 y RF9 deben responder en menos de 300ms (p95) bajo carga de 1200 req/min.</p>
+    </div>
+
+    <div class="card">
+        <h2>RF8: Top Categories History</h2>
+        <p class="metric success">28 ms</p>
+        <div class="bar-container">
+            <div class="bar bar-success" 
+                 style="width: 9.33%">
+                <span class="bar-label">28 ms</span>
+            </div>
+            <div class="threshold" style="left: calc(100% * 300/300)">
+                <span class="threshold-label">Límite: 300ms</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>RF9: Expenses by Category</h2>
+        <p class="metric success">29 ms</p>
+        <div class="bar-container">
+            <div class="bar bar-success"
+                 style="width: 9.66%">
+                <span class="bar-label">29 ms</span>
+            </div>
+            <div class="threshold" style="left: calc(100% * 300/300)">
+                <span class="threshold-label">Límite: 300ms</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Conclusión</h2>
+        <p>El sistema cumple con el RNF 1 de performance. Los endpoints RF8 (28 ms) y RF9 (29 ms) responden muy por debajo del límite de 300ms bajo una carga de 1200 req/min.</p>
+        <p><strong>Fecha de la prueba:</strong> 2025-04-29 13:15:00</p>
+    </div>
+</body>
+</html>

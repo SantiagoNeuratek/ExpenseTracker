@@ -32,6 +32,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import LoadTestPanel from '../components/LoadTestPanel';
 
 const AdminPanel = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -502,6 +503,10 @@ const AdminPanel = () => {
               </Card>
             </Col>
           </Row>
+        </Tab>
+
+        <Tab eventKey="load-tests" title={<><Speedometer className="me-2" /> Pruebas de Carga</>}>
+          <LoadTestPanel />
         </Tab>
       </Tabs>
     </Container>

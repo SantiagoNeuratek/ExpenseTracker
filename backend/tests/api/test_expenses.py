@@ -349,7 +349,7 @@ def test_get_top_categories(client: TestClient, db: Session):
     db.commit()
     
     # Act
-    headers = {"API-Key": api_key}
+    headers = {"api-key": api_key}
     response = client.get("/api/v1/expenses/top-categories", headers=headers)
     
     # Assert
@@ -425,7 +425,7 @@ def test_get_expenses_by_category(client: TestClient, db: Session):
     end_date = (test_date + timedelta(days=5)).strftime("%Y-%m-%d")
     
     # Act
-    headers = {"API-Key": api_key}
+    headers = {"api-key": api_key}
     response = client.get(
         f"/api/v1/expenses/by-category?category_id={category.id}&start_date={start_date}&end_date={end_date}",
         headers=headers

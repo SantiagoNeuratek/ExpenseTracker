@@ -36,23 +36,42 @@ services:
       - SECRET_KEY=${SECRET_KEY:-secretkeyfordev}
       - SERVER_NAME=ExpenseTracker
       - SERVER_HOST=http://localhost:8000
-      - BACKEND_CORS_ORIGINS=["http://localhost:8501", "http://localhost:8000", "http://frontend:8501"]
+      - BACKEND_CORS_ORIGINS=["http://localhost", "http://localhost:8000", "http://localhost:5173", "http://frontend:80"]
+      - LOAD_INITIAL_DATA=true
     depends_on:
       db:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
-    build: ./frontend
+    build: ./frontend-react
     volumes:
-      - ./frontend:/app
+      - ./frontend-react:/app
+      - /app/node_modules
     ports:
-      - "8501:8501"
+      - "80:80"
     environment:
-      - BACKEND_URL=http://backend:8000
+      - VITE_API_URL=http://localhost:8000/api/v1
     depends_on:
       - backend
-    command: streamlit run streamlit_app.py
+
+  # Servicio para desarrollo del frontend
+  frontend-dev:
+    build: 
+      context: ./frontend-react
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend-react:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    profiles:
+      - dev
+    command: npm run dev -- --host 0.0.0.0
 
   # Service for running tests
   test:
@@ -76,6 +95,8 @@ services:
       db:
         condition: service_healthy
     command: pytest -xvs
+    profiles:
+      - test
 
 volumes:
   postgres_data:

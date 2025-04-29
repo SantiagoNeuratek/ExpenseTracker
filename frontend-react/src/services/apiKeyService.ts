@@ -43,7 +43,7 @@ export const getTopCategoriesHistory = async (apiKey: string): Promise<TopCatego
   try {
     const response = await apiClient.get<TopCategory[]>('/expenses/top-categories-history', {
       headers: {
-        'API-Key': apiKey
+        'api-key': apiKey
       }
     });
     return response.data;
@@ -70,7 +70,7 @@ export const getExpensesByCategoryRest = async (
   try {
     const response = await apiClient.get<Expense[]>('/expenses/by-category', {
       headers: {
-        'API-Key': apiKey
+        'api-key': apiKey
       },
       params: {
         category_id: categoryId,

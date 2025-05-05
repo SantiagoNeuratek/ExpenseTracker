@@ -1,0 +1,97 @@
+name: AWS Deploy Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_to_eb:
+        description: 'Deploy to Elastic Beanstalk'
+        required: true
+        default: false
+        type: boolean
+
+env:
+  AWS_REGION: us-east-2
+  ECR_REPOSITORY_BACKEND: expense-tracker-backend
+  ECR_REPOSITORY_FRONTEND: expense-tracker-frontend
+  EB_ENVIRONMENT_NAME: expense-tracker-pr
+  EB_APPLICATION_NAME: expense-tracker
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build and push backend image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        push: true
+        platforms: linux/amd64
+        tags: |
+          ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_BACKEND }}:latest
+          ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_BACKEND }}:${{ github.sha }}
+
+    - name: Build and push frontend image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend-react
+        push: true
+        platforms: linux/amd64
+        tags: |
+          ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_FRONTEND }}:latest
+          ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ github.sha }}
+
+    - name: Create deployment package
+      if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_eb == 'true' }}
+      run: |
+        zip -r deployment.zip docker-compose.yml Dockerrun.aws.json .ebextensions/
+
+    - name: Deploy to Elastic Beanstalk
+      if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_eb == 'true' }}
+      uses: einaregilsson/beanstalk-deploy@v21
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: ${{ env.EB_APPLICATION_NAME }}
+        environment_name: ${{ env.EB_ENVIRONMENT_NAME }}
+        region: ${{ env.AWS_REGION }}
+        deployment_package: deployment.zip
+        version_label: ${{ github.sha }}
+        wait_for_deployment: true
+
+  deploy-status:
+    needs: build-and-push
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_eb == 'true' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Get deployment status
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Check Elastic Beanstalk health
+      run: |
+        aws elasticbeanstalk describe-environments --environment-names ${{ env.EB_ENVIRONMENT_NAME }} --query "Environments[0].Health" --output text
+        echo "Deployment URL: ${{ env.EB_ENVIRONMENT_NAME }}.eba-9hrqmeqe.${{ env.AWS_REGION }}.elasticbeanstalk.com" 

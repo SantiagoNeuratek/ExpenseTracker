@@ -372,4 +372,39 @@ docker buildx build --platform linux/amd64 -t <aws-account-id>.dkr.ecr.<region>.
 ./cleanup.sh
 ```
 
+## CI/CD Pipeline
+
+This project includes a GitHub Actions workflow for automated deployments to AWS:
+
+### Automatic Image Builds
+
+Every push to the `main` branch automatically:
+- Builds the backend and frontend Docker images for AMD64 architecture
+- Pushes the images to Amazon ECR with both `latest` and commit-specific tags
+
+### Manual Deployment to Elastic Beanstalk
+
+You can trigger a full deployment to Elastic Beanstalk through GitHub Actions:
+
+1. Go to the "Actions" tab in your GitHub repository
+2. Select the "AWS Deploy Pipeline" workflow
+3. Click "Run workflow"
+4. Check "Deploy to Elastic Beanstalk" option
+5. Click "Run workflow" to start the deployment
+
+### Required GitHub Secrets
+
+To use the CI/CD pipeline, add these secrets to your GitHub repository:
+
+- `AWS_ACCESS_KEY_ID`: Your AWS access key with permissions for ECR and Elastic Beanstalk
+- `AWS_SECRET_ACCESS_KEY`: The corresponding secret key
+
+### Customizing the Pipeline
+
+You can modify the workflow file at `.github/workflows/aws-deploy.yml` to adjust:
+- AWS region
+- Repository names
+- Environment names
+- Deployment triggers
+
 ## Contributing

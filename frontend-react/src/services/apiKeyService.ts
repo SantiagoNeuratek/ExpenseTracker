@@ -14,7 +14,7 @@ export const getApiKeys = async (): Promise<ApiKey[]> => {
 };
 
 // Crear una nueva API key
-export const createApiKey = async (data: { name: string }): Promise<ApiKeyCreateResponse> => {
+export const createApiKey = async (data: { name: string, company_id?: number }): Promise<ApiKeyCreateResponse> => {
   try {
     const response = await apiClient.post<ApiKeyCreateResponse>('/apikeys', data);
     return response.data;

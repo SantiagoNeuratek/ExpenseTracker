@@ -6,6 +6,7 @@ from sqlalchemy import and_
 from app.api.deps import get_db, get_current_user
 from app.models.apikey import ApiKey
 from app.models.user import User
+from app.models.company import Company
 from app.core.security import create_api_key, hash_api_key
 from app.schemas.apikey import (
     ApiKey as ApiKeySchema,
@@ -109,8 +110,26 @@ def create_new_api_key(
             detail="Ya existe una API key activa con ese nombre"
         )
 
+    # Determinar el company_id a utilizar
+    company_id = current_user.company_id
+    
+    # Si el usuario es administrador y se proporciona un company_id, usar ese
+    if current_user.is_admin and api_key_in.company_id is not None:
+        company_id = api_key_in.company_id
+        
+        # Verificar que la empresa existe
+        company = db.query(Company).filter(Company.id == company_id).first()
+        if not company:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La empresa especificada no existe"
+            )
+    elif api_key_in.company_id is not None and not current_user.is_admin:
+        # Si un usuario no-admin intenta especificar una company_id, ignorarlo
+        logger.warning(f"Usuario no-admin (ID: {current_user.id}) intentó crear API key para otra empresa")
+
     # Generar API key with JWT
-    key = create_api_key(current_user.id, current_user.company_id)
+    key = create_api_key(current_user.id, company_id)
     key_hash = hash_api_key(key)
 
     # Crear registro en base de datos con todos los campos
@@ -118,7 +137,7 @@ def create_new_api_key(
         name=api_key_in.name,
         key_hash=key_hash,
         user_id=current_user.id,
-        company_id=current_user.company_id,
+        company_id=company_id,
         is_active=True,  # Explícitamente establecemos is_active
     )
 

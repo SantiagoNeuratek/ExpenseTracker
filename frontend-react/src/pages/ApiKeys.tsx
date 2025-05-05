@@ -24,6 +24,7 @@ import {
 import { getApiKeys, createApiKey, deleteApiKey } from '../services/apiKeyService';
 import { ApiKey, ApiError } from '../types';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 
 const ApiKeys = () => {
   const { addNotification } = useNotification();
@@ -34,6 +35,7 @@ const ApiKeys = () => {
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeyData, setNewKeyData] = useState<{ key: string; name: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, currentCompany } = useAuth();
 
   // Cargar lista de API keys
   const fetchApiKeys = async () => {
@@ -91,7 +93,18 @@ const ApiKeys = () => {
       setIsSubmitting(true);
       setError(null);
       
-      const response = await createApiKey({ name: newKeyName });
+      // Preparar datos para la creación de API key
+      const apiKeyData: { name: string, company_id?: number } = { 
+        name: newKeyName 
+      };
+      
+      // Si el usuario es administrador y hay una compañía seleccionada,
+      // incluir el company_id en la petición
+      if (user?.is_admin && currentCompany) {
+        apiKeyData.company_id = currentCompany.id;
+      }
+      
+      const response = await createApiKey(apiKeyData);
       
       // Guardar la clave generada para mostrarla una única vez
       setNewKeyData({ 
@@ -281,6 +294,18 @@ const ApiKeys = () => {
             </>
           ) : (
             <Form onSubmit={handleCreateApiKey}>
+              {user?.is_admin && (
+                <Alert variant="info" className="mb-4">
+                  <InfoCircle className="me-2" />
+                  Como administrador, estás creando una API key para la empresa actualmente seleccionada.
+                  {!currentCompany && (
+                    <div className="mt-2 fw-bold">
+                      ⚠️ Necesitas seleccionar una empresa primero en el selector de empresas del menú lateral.
+                    </div>
+                  )}
+                </Alert>
+              )}
+              
               <Form.Group className="mb-3">
                 <Form.Label>Nombre de la API Key</Form.Label>
                 <Form.Control 
@@ -295,6 +320,30 @@ const ApiKeys = () => {
                 </Form.Text>
               </Form.Group>
               
+              {user?.is_admin && (
+                <Form.Group className="mb-3">
+                  <Form.Label>Empresa</Form.Label>
+                  {currentCompany ? (
+                    <div className="d-flex align-items-center">
+                      <div className="border rounded p-2 bg-light w-100">
+                        <strong>{currentCompany.name}</strong>
+                        <div className="small text-muted">ID: {currentCompany.id}</div>
+                      </div>
+                      <OverlayTrigger
+                        placement="top"
+                        overlay={<Tooltip>Como administrador, puedes crear API keys para la empresa seleccionada.</Tooltip>}
+                      >
+                        <InfoCircle className="ms-2 text-primary" />
+                      </OverlayTrigger>
+                    </div>
+                  ) : (
+                    <Alert variant="warning" className="mb-0 py-2">
+                      <strong>No hay empresa seleccionada.</strong> Por favor, seleccione una empresa primero en el selector de empresas.
+                    </Alert>
+                  )}
+                </Form.Group>
+              )}
+              
               {error && (
                 <Alert variant="danger" className="mt-3">
                   {error}
@@ -308,7 +357,7 @@ const ApiKeys = () => {
                 <Button 
                   variant="primary" 
                   type="submit"
-                  disabled={isSubmitting || !newKeyName.trim()}
+                  disabled={isSubmitting || !newKeyName.trim() || (user?.is_admin && !currentCompany)}
                 >
                   {isSubmitting ? 'Generando...' : 'Generar API Key'}
                 </Button>

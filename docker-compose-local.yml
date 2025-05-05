@@ -1,0 +1,64 @@
+version: '3'
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=expense_tracker
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: 
+      context: ./backend
+      args:
+        - INSTALL_DEV=false
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=expense_tracker
+      - LOG_LEVEL=INFO
+      - JSON_LOGS=true
+      - ENVIRONMENT=development
+      - ACCESS_TOKEN_EXPIRE_MINUTES=10080
+      - SECRET_KEY=secretkeyfordev
+      - SERVER_NAME=ExpenseTracker
+      - SERVER_HOST=http://localhost:8000
+      - API_V1_STR=/api/v1
+      - BACKEND_CORS_ORIGINS=["http://localhost", "http://localhost:8000", "http://localhost:5173", "http://frontend:80"]
+      - LOAD_INITIAL_DATA=true
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: 
+      context: ./frontend-react
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend-react:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data: 

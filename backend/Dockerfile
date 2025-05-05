@@ -26,12 +26,6 @@ WORKDIR /app
 # Copiar todo el código primero
 COPY . .
 
-# Copy the env.example to .env as a starting point
-RUN cp env.example .env
-
-# Remove any existing SQLALCHEMY_DATABASE_URI from the .env file
-RUN sed -i '/SQLALCHEMY_DATABASE_URI/d' .env
-
 # ARG to control whether to install dev dependencies
 ARG INSTALL_DEV=false
 

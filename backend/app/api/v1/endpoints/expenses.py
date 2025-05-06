@@ -1,5 +1,5 @@
-from typing import Any, List
-from datetime import date
+from typing import Any, List, Optional
+from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import and_, func
@@ -32,9 +32,9 @@ logger = get_logger(__name__)
 @router.get("", response_model=ExpensePagination)
 def read_expenses(
     db: Session = Depends(get_db),
-    start_date: date = Query(None),
-    end_date: date = Query(None),
-    category_id: int = Query(None),
+    start_date: Optional[str] = Query(None, description="Fecha inicial en formato YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="Fecha final en formato YYYY-MM-DD"),
+    category_id: Optional[int] = Query(None),
     show_inactive: bool = Query(False, description="Incluir gastos inactivos/eliminados"),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
@@ -51,11 +51,26 @@ def read_expenses(
     if not show_inactive:
         query = query.filter(Expense.is_active == True)
 
+    # Convertir strings de fecha a objetos date
+    parsed_start_date = None
+    parsed_end_date = None
+    
+    try:
+        if start_date:
+            parsed_start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        if end_date:
+            parsed_end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato de fecha inválido. Use YYYY-MM-DD"
+        )
+
     # Aplicar filtros
-    if start_date:
-        query = query.filter(Expense.date_incurred >= start_date)
-    if end_date:
-        query = query.filter(Expense.date_incurred <= end_date)
+    if parsed_start_date:
+        query = query.filter(Expense.date_incurred >= parsed_start_date)
+    if parsed_end_date:
+        query = query.filter(Expense.date_incurred <= parsed_end_date)
     if category_id:
         query = query.filter(Expense.category_id == category_id)
 
@@ -79,8 +94,8 @@ def read_expenses(
 @router.get("/top-categories", response_model=List[TopCategory])
 def get_top_categories(
     db: Session = Depends(get_db),
-    start_date: date = Query(...),
-    end_date: date = Query(...),
+    start_date: Optional[str] = Query(None, description="Fecha inicial en formato YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="Fecha final en formato YYYY-MM-DD"),
     limit: int = Query(5, ge=1, le=20),
     current_user: User = Depends(get_current_user),
     company_id: int = Depends(get_company_id),
@@ -92,9 +107,31 @@ def get_top_categories(
     import hashlib
     import json
     from app.core.cache import cache
+    from datetime import datetime, timedelta
+    
+    # Convertir strings de fecha a objetos date
+    parsed_start_date = None
+    parsed_end_date = None
+    
+    try:
+        if start_date:
+            parsed_start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        if end_date:
+            parsed_end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato de fecha inválido. Use YYYY-MM-DD"
+        )
+    
+    # Si no se especifican fechas, usar últimos 30 días
+    if parsed_start_date is None:
+        parsed_start_date = datetime.now().date() - timedelta(days=30)
+    if parsed_end_date is None:
+        parsed_end_date = datetime.now().date()
 
     # Crear una clave de caché única basada en los parámetros
-    cache_key = f"top_categories:{company_id}:{start_date}:{end_date}:{limit}"
+    cache_key = f"top_categories:{company_id}:{parsed_start_date}:{parsed_end_date}:{limit}"
     cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()
     
     # Intentar obtener resultados de caché
@@ -116,8 +153,8 @@ def get_top_categories(
         .filter(
             and_(
                 Expense.company_id == company_id,
-                Expense.date_incurred >= start_date,
-                Expense.date_incurred <= end_date,
+                Expense.date_incurred >= parsed_start_date,
+                Expense.date_incurred <= parsed_end_date,
                 Expense.is_active == True,
             )
         )
@@ -141,8 +178,8 @@ def get_top_categories(
 @router.get("/by-category", response_model=List[ExpenseSchema])
 def get_expenses_by_category(
     category_id: int,
-    start_date: date,
-    end_date: date,
+    start_date: str = Query(..., description="Fecha inicial en formato YYYY-MM-DD"),
+    end_date: str = Query(..., description="Fecha final en formato YYYY-MM-DD"),
     db: Session = Depends(get_db),
     company_id: int = Depends(get_api_key_company),
 ) -> Any:
@@ -150,6 +187,19 @@ def get_expenses_by_category(
     Obtener gastos por categoría y período.
     Este endpoint público requiere una API KEY válida para identificar la empresa.
     """
+    # Convertir strings de fecha a objetos date
+    parsed_start_date = None
+    parsed_end_date = None
+    
+    try:
+        parsed_start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        parsed_end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato de fecha inválido. Use YYYY-MM-DD"
+        )
+    
     # Verificar que la categoría existe y pertenece a la empresa
     category = (
         db.query(Category)
@@ -175,8 +225,8 @@ def get_expenses_by_category(
             and_(
                 Expense.category_id == category_id,
                 Expense.company_id == company_id,
-                Expense.date_incurred >= start_date,
-                Expense.date_incurred <= end_date,
+                Expense.date_incurred >= parsed_start_date,
+                Expense.date_incurred <= parsed_end_date,
                 Expense.is_active == True,
             )
         )
@@ -511,7 +561,7 @@ def delete_expense(
         # Commit final para aplicar todos los cambios
         db.commit()
         
-        return {"message": "Gasto eliminado correctamente"}
+        return {"status": "success"}
     except Exception as e:
         db.rollback()
         raise HTTPException(

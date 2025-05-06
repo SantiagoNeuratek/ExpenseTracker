@@ -71,17 +71,21 @@ def health_check(db: Session = Depends(get_db), full: bool = False):
         # Time the database query execution
         start_time = time.time()
         
-        # Run a simple query that also returns the current time from the database
-        result = db.execute(text("SELECT 1 as is_alive, NOW() as server_time")).first()
+        # Simple query to check if database is responding
+        current_time = datetime.now().isoformat()
+        result = db.execute(text("SELECT 1 as is_alive")).first()
         
         # Calculate query time
         db_response_time = time.time() - start_time
         
-        # Database is responding
+        # Database connection successful
         health_status["components"]["database"] = {
-            "status": "ok",
+            "status": "healthy",
             "response_time_ms": round(db_response_time * 1000, 2),
-            "server_time": result.server_time.isoformat() if hasattr(result, "server_time") else None
+            "details": {
+                "is_alive": bool(result.is_alive),
+                "server_time": current_time
+            }
         }
         
         # Add detailed DB metrics in full mode
@@ -99,8 +103,7 @@ def health_check(db: Session = Depends(get_db), full: bool = False):
                 pass
     except Exception as e:
         # Log detailed error for troubleshooting
-        logger.error("Database health check failed", 
-                    data={"error": str(e), "error_type": type(e).__name__}, 
+        logger.error(f"Database health check failed: {str(e)}, type: {type(e).__name__}", 
                     exc_info=e)
         
         # Database connection failed
@@ -185,8 +188,7 @@ def system_health():
             "error": "psutil no está instalado. Instálalo con 'pip install psutil' para ver métricas del sistema."
         }
     except Exception as e:
-        logger.error("Error getting system health metrics", 
-                   data={"error": str(e), "error_type": type(e).__name__},
+        logger.error(f"Error getting system health metrics: {str(e)}, type: {type(e).__name__}", 
                    exc_info=e)
         return {
             "error": f"Error getting system metrics: {str(e)}",

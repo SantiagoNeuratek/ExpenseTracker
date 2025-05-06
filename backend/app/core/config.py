@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = secrets.token_urlsafe(32)
     # 60 minutos * 24 horas * 7 días = 1 semana
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
+    ALGORITHM: str = "HS256"
     SERVER_NAME: str = "ExpenseTracker"
     SERVER_HOST: AnyHttpUrl = "http://localhost:8000"
     

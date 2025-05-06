@@ -161,10 +161,25 @@ def test_delete_category(client: TestClient, admin_token: str, db: Session):
 
 
 def test_unauthorized_access(client: TestClient):
-    """Test accessing endpoints without authentication returns 401"""
-    # Act
-    response = client.get("/api/v1/categories")
+    """Test that unauthorized access returns 401"""
+    # Restaurar la dependencia original para este test
+    from app.api.deps import get_current_user, get_current_admin
+    from app.main import app
     
-    # Assert
-    assert response.status_code == 401
-    assert "Not authenticated" in response.json()["detail"]
+    # Guardamos los overrides anteriores
+    previous_overrides = app.dependency_overrides.copy()
+    
+    # Aseguramos que no haya override para la autenticación
+    if get_current_user in app.dependency_overrides:
+        del app.dependency_overrides[get_current_user]
+    if get_current_admin in app.dependency_overrides:
+        del app.dependency_overrides[get_current_admin]
+    
+    try:
+        # Intentar acceder sin token
+        response = client.get("/api/v1/categories/", headers={})
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Not authenticated"
+    finally:
+        # Restaurar los overrides originales
+        app.dependency_overrides = previous_overrides

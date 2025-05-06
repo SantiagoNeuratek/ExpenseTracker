@@ -24,8 +24,9 @@ def read_categories(
     company_id: int = Depends(get_company_id),
 ) -> Any:
     """
-    Obtener todas las categorías de la empresa seleccionada.
+    Retrieve categories by company.
     """
+    # Mostrar solo categorías activas
     categories = (
         db.query(Category)
         .filter(
@@ -38,6 +39,7 @@ def read_categories(
         .limit(limit)
         .all()
     )
+    
     return categories
 
 
@@ -180,7 +182,7 @@ def update_category(
     return category
 
 
-@router.delete("/{category_id}", response_model=CategorySchema)
+@router.delete("/{category_id}", response_model=dict)
 def delete_category(
     *,
     db: Session = Depends(get_db),
@@ -215,4 +217,4 @@ def delete_category(
     db.commit()
     db.refresh(category)
 
-    return category
+    return {"message": "Categoría eliminada"}

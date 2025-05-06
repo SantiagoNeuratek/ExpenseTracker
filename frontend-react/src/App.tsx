@@ -19,6 +19,7 @@ import CompanyList from './pages/CompanyList';
 import UserInvite from './pages/UserInvite';
 import InvitationAccept from './pages/InvitationAccept';
 import ExpenseDetail from './pages/ExpenseDetail';
+import Audit from './pages/Audit';
 
 function App() {
   const { isAuthenticated } = useAuth();
@@ -110,6 +111,16 @@ function Layout() {
             element={
               <ProtectedRoute adminOnly>
                 <AdminPanel />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Ruta para auditoría */}
+          <Route 
+            path="/audit" 
+            element={
+              <ProtectedRoute adminOnly>
+                <Audit />
               </ProtectedRoute>
             } 
           />

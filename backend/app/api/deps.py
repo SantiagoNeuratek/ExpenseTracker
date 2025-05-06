@@ -1,4 +1,4 @@
-from typing import Generator, Optional
+from typing import Any, Dict, List, Optional, Callable, Generator, Union
 from fastapi import Depends, HTTPException, status, Header, Query
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
@@ -12,8 +12,10 @@ from app.models.company import Company
 from app.models.apikey import ApiKey
 from app.core.config import settings
 from app.core.security import verify_api_key, decode_api_key, hash_api_key
-from app.schemas.token import TokenPayload
+from app.schemas.token import TokenPayload, TokenData
 from app.core.logging import set_user_id, set_company_id, log_security_event, get_logger
+
+ALGORITHM = "HS256"
 
 logger = get_logger(__name__)
 
@@ -25,54 +27,36 @@ oauth2_scheme = OAuth2PasswordBearer(
 def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
 ) -> User:
+    """
+    Obtiene el usuario actual a partir del token JWT.
+    """
     try:
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=["HS256"]
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
-        token_data = TokenPayload(**payload)
-    except (JWTError, ValidationError) as e:
-        log_security_event(
-            logger, 
-            "auth_failed", 
-            message="Token validation failed", 
-            data={"error": str(e)}
+        token_data = TokenData(
+            id=int(payload.get("sub")),
+            is_admin=payload.get("is_admin", False),
+            company_id=payload.get("company_id"),
         )
+    except (JWTError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No se pudo validar las credenciales",
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    user = db.query(User).filter(User.id == token_data.sub).first()
+
+    user = db.query(User).filter(User.id == token_data.id).first()
     if not user:
-        log_security_event(
-            logger, 
-            "auth_failed", 
-            message="User not found", 
-            data={"user_id": token_data.sub}
-        )
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    
     if not user.is_active:
-        log_security_event(
-            logger, 
-            "auth_failed", 
-            user_id=user.id,
-            message="Inactive user", 
-            data={"company_id": user.company_id}
-        )
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="Usuario inactivo"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
-    
-    # Set user and company ID in the logging context
-    set_user_id(user.id)
-    if user.company_id is not None:
-        set_company_id(user.company_id)
-    
     return user
 
 # Dependencia para validar que el usuario sea administrador
@@ -135,73 +119,49 @@ def get_company_id(
     )
 
 # Dependencia para validar API Key
-def get_api_key_company(
-    api_key: str = Header(..., description="API Key for authentication")
-) -> int:
+async def get_api_key(
+    db: Session = Depends(get_db),
+    api_key: str = Header(None, alias="api-key"),
+) -> Dict[str, Any]:
     """
-    Dependency to validate API key and return the associated company_id.
+    Verify and return API key details from header.
     """
-    # Decode the JWT API key
-    payload = decode_api_key(api_key)
-    if not payload:
-        log_security_event(
-            logger, 
-            "api_key_invalid", 
-            message="Invalid API key format"
-        )
+    if api_key is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key",
-            headers={"WWW-Authenticate": "ApiKey"},
+            detail="API key is missing",
         )
     
-    # Get company_id from payload
-    company_id = payload.get("company_id")
-    user_id = payload.get("sub")
+    # Hash the API key for comparison with stored hashes
+    key_hash = hash_api_key(api_key)
     
-    if not company_id:
-        log_security_event(
-            logger, 
-            "api_key_invalid", 
-            message="Missing company_id in API key",
-            data={"user_id": user_id}
-        )
+    # Find the key in the database
+    db_key = db.query(ApiKey).filter(
+        ApiKey.key_hash == key_hash,
+        ApiKey.is_active == True,
+    ).first()
+    
+    if not db_key:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Invalid API Key format",
-            headers={"WWW-Authenticate": "ApiKey"},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
         )
     
-    # Get DB session to verify the key exists and is active
-    db = SessionLocal()
-    try:
-        # Hash the API key to find it in the database
-        api_key_hash = hash_api_key(api_key)
-        api_key_record = (
-            db.query(ApiKey)
-            .filter(ApiKey.key_hash == api_key_hash, ApiKey.is_active == True)
-            .first()
-        )
-        
-        if not api_key_record:
-            log_security_event(
-                logger, 
-                "api_key_inactive", 
-                user_id=int(user_id) if user_id else None,
-                message="API Key not found or inactive", 
-                data={"company_id": company_id}
-            )
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="API Key not found or inactive",
-                headers={"WWW-Authenticate": "ApiKey"},
-            )
-        
-        # Set company ID in the logging context
-        set_company_id(company_id)
-        if user_id:
-            set_user_id(int(user_id))
-        
-        return company_id
-    finally:
-        db.close()
+    # API key found and is valid
+    key_data = {
+        "key_id": db_key.id,
+        "user_id": db_key.user_id,
+        "company_id": db_key.company_id,
+        "created_at": db_key.created_at,
+        "name": db_key.name,
+    }
+    
+    return key_data
+
+# Función auxiliar para extraer el company_id de un API key
+def get_api_key_company(api_key_data: Dict[str, Any] = Depends(get_api_key)) -> int:
+    """
+    Extrae el company_id de un API key validado.
+    Para usar en endpoints públicos que requieren identificar la empresa del cliente.
+    """
+    return api_key_data["company_id"]

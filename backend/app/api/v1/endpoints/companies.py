@@ -24,10 +24,16 @@ def list_companies(
     Solo accesible para administradores.
     """
     companies = db.query(Company).order_by(Company.name).all()
+    
+    # Convertir los logos binarios a base64 para la respuesta
+    for company in companies:
+        if company.logo and not isinstance(company.logo, str):
+            company.logo = base64.b64encode(company.logo).decode('utf-8') if company.logo else None
+    
     return companies
 
 
-@router.post("", response_model=CompanySchema)
+@router.post("", response_model=CompanySchema, status_code=status.HTTP_201_CREATED)
 def create_company(
     *,
     db: Session = Depends(get_db),
@@ -55,6 +61,10 @@ def create_company(
     db.add(company)
     db.commit()
     db.refresh(company)
+    
+    # Convertir logo binario a base64 para la respuesta
+    if company.logo and not isinstance(company.logo, str):
+        company.logo = base64.b64encode(company.logo).decode('utf-8') if company.logo else None
 
     return company
 
@@ -80,6 +90,10 @@ def read_company(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Empresa no encontrada"
         )
+    
+    # Convertir logo binario a base64 para la respuesta
+    if company.logo and not isinstance(company.logo, str):
+        company.logo = base64.b64encode(company.logo).decode('utf-8') if company.logo else None
 
     return company
 

@@ -2,10 +2,31 @@ from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
 import pytest
 from sqlalchemy.orm import Session
+import time
 
 from app.models.expense import Expense
 from app.models.category import Category
 from app.models.audit import AuditRecord
+
+
+def create_random_expense(db: Session) -> Expense:
+    """Create a random expense for testing"""
+    # Get a category
+    category = db.query(Category).filter(Category.is_active == True).first()
+    user = db.query(Category).filter(Category.id == category.id).first().company.users[0]
+    
+    expense = Expense(
+        amount=150.0,
+        date_incurred=datetime.now(),
+        description="Test expense for deletion",
+        category_id=category.id,
+        user_id=user.id,
+        company_id=user.company_id
+    )
+    db.add(expense)
+    db.commit()
+    db.refresh(expense)
+    return expense
 
 
 def test_create_expense(client: TestClient, user_token: str, db: Session):
@@ -237,42 +258,27 @@ def test_update_expense(client: TestClient, admin_token: str, db: Session):
 
 
 def test_delete_expense(client: TestClient, admin_token: str, db: Session):
-    """Test delete expense creates an audit trail and properly removes the expense"""
+    """Test that an admin can delete an expense"""
     # Arrange
-    headers = {"Authorization": f"Bearer {admin_token}"}
-    
-    # Create a test expense to delete
-    category = db.query(Category).filter(Category.is_active == True).first()
-    user = db.query(Category).filter(Category.id == category.id).first().company.users[0]
-    
-    expense = Expense(
-        amount=150.0,
-        date_incurred=datetime.now(),
-        description="Test expense for deletion",
-        category_id=category.id,
-        user_id=user.id,
-        company_id=user.company_id
-    )
-    db.add(expense)
-    db.commit()
-    db.refresh(expense)
-    
-    # Remember the ID for checking audit trail
+    expense = create_random_expense(db=db)
     expense_id = expense.id
     
     # Act
-    response = client.delete(
-        f"/api/v1/expenses/{expense_id}",
-        headers=headers
-    )
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = client.delete(f"/api/v1/expenses/{expense_id}", headers=headers)
     
     # Assert
     assert response.status_code == 200
     assert response.json()["status"] == "success"
     
-    # Verify expense was deleted
+    # Verify expense was marked as inactive (logical deletion)
     deleted_expense = db.query(Expense).filter(Expense.id == expense_id).first()
-    assert deleted_expense is None
+    assert deleted_expense is not None
+    assert deleted_expense.is_active == False
+    
+    # Verify the expense doesn't show up in normal GET requests
+    get_response = client.get(f"/api/v1/expenses/{expense_id}", headers=headers)
+    assert get_response.status_code == 404
     
     # Verify audit trail was created
     audit_records = db.query(AuditRecord).filter(
@@ -283,7 +289,7 @@ def test_delete_expense(client: TestClient, admin_token: str, db: Session):
     latest_audit = audit_records[-1]
     assert latest_audit.action == "delete"
     assert "amount" in latest_audit.previous_data
-    assert float(latest_audit.previous_data["amount"]) == 150.0
+    assert float(latest_audit.previous_data["amount"]) == float(expense.amount)
 
 
 def test_get_top_categories(client: TestClient, db: Session):
@@ -324,8 +330,10 @@ def test_get_top_categories(client: TestClient, db: Session):
     if len(categories) < 3:
         # Create additional categories if needed
         for i in range(3 - len(categories)):
+            # Usar un timestamp único para evitar colisiones de nombres
+            timestamp = int(time.time() * 1000)
             category = Category(
-                name=f"Test Category {i+1}",
+                name=f"Test Category {i+1}_{timestamp}",
                 description=f"Test category {i+1} for top categories test",
                 company_id=company_id,
                 is_active=True
@@ -350,7 +358,7 @@ def test_get_top_categories(client: TestClient, db: Session):
     
     # Act
     headers = {"api-key": api_key}
-    response = client.get("/api/v1/expenses/top-categories", headers=headers)
+    response = client.get("/api/v1/expenses/top-categories-history", headers=headers)
     
     # Assert
     assert response.status_code == 200

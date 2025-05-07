@@ -8,10 +8,10 @@ class Company(Base):
     __tablename__ = "companies"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True, nullable=False)
-    address = Column(String, nullable=False)
-    website = Column(String, nullable=False)
-    logo = Column(LargeBinary, nullable=False)  # Almacenamiento de logo en binario
+    name = Column(String, index=True)
+    logo = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+    website = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

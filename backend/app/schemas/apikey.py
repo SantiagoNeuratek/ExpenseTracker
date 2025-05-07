@@ -8,7 +8,7 @@ class ApiKeyBase(BaseModel):
 
 # Esquema para crear un ApiKey
 class ApiKeyCreate(ApiKeyBase):
-    pass
+    company_id: Optional[int] = None
 
 # Esquema para la respuesta de ApiKey (sin mostrar el key completo)
 class ApiKey(ApiKeyBase):

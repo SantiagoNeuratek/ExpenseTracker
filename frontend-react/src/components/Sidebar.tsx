@@ -10,7 +10,8 @@ import {
   Gear, 
   Key,
   Building,
-  EnvelopePlus
+  EnvelopePlus,
+  Activity
 } from 'react-bootstrap-icons';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
@@ -43,7 +44,20 @@ const Sidebar = () => {
       try {
         setIsLoading(true);
         const companiesData = await getCompanies();
-        setCompanies(companiesData);
+        
+        // Procesar logos de empresas para asegurar formato correcto
+        const processedCompanies = companiesData.map(company => {
+          if (company.logo && !company.logo.startsWith('data:')) {
+            // Convertir a formato data URL si no lo es ya
+            return {
+              ...company,
+              logo: `data:image/png;base64,${company.logo}`
+            };
+          }
+          return company;
+        });
+        
+        setCompanies(processedCompanies);
       } catch (error) {
         console.error('Error al cargar empresas:', error);
       } finally {
@@ -54,6 +68,12 @@ const Sidebar = () => {
       try {
         setIsLoading(true);
         const companyData = await getCompanyById(user.company_id);
+        
+        // Procesar logo si existe
+        if (companyData.logo && !companyData.logo.startsWith('data:')) {
+          companyData.logo = `data:image/png;base64,${companyData.logo}`;
+        }
+        
         // Actualizar la empresa actual con datos completos, incluso si ya existe
         setCurrentCompany(companyData);
       } catch (error) {
@@ -121,6 +141,7 @@ const Sidebar = () => {
       { title: 'Empresas', icon: Building, path: '/companies' },
       { title: 'Invitar Usuarios', icon: EnvelopePlus, path: '/users/invite' },
       { title: 'Gestión de Usuarios', icon: People, path: '/usermanagement' },
+      { title: 'Auditoría', icon: Activity, path: '/audit' },
       { title: 'Panel de Administración', icon: Gear, path: '/adminpanel' }
     ],
     'Cuenta': [

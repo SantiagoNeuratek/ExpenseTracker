@@ -111,4 +111,27 @@ export interface CategoryUpdate {
   description?: string;
   expense_limit?: number | null;
   is_active?: boolean;
+}
+
+// Interfaz para registros de auditoría
+export interface AuditRecord {
+  id: number;
+  action: string;
+  entity_type: string;
+  entity_id: number;
+  previous_data?: any;
+  new_data?: any;
+  user_id: number;
+  expense_id?: number;
+  created_at: string;
+  user_email?: string;
+  entity_description?: string;
+}
+
+// Interfaz para respuesta paginada de auditoría
+export interface AuditRecordPagination {
+  items: AuditRecord[];
+  total: number;
+  page: number;
+  page_size: number;
 } 

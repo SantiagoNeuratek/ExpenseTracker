@@ -201,12 +201,18 @@ class MetricsCollector:
         
         # Log global stats
         global_stats = metrics_data.pop("_global", {})
+        uptime = int(global_stats.get('uptime_seconds', 0))
+        requests = global_stats.get('total_requests', 0)
+        errors = global_stats.get('total_errors', 0)
+        error_rate = global_stats.get('error_rate', 0)
+        req_per_min = global_stats.get('requests_per_minute', 0)
+        
         logger.info(
-            f"Global metrics (uptime: {int(global_stats.get('uptime_seconds', 0))}s): "
-            f"requests={global_stats.get('total_requests', 0)}, "
-            f"errors={global_stats.get('total_errors', 0)}, "
-            f"error_rate={global_stats.get('error_rate', 0):.2f}%, "
-            f"req/min={global_stats.get('requests_per_minute', 0):.2f}"
+            f"Global metrics (uptime: {uptime}s): "
+            f"requests={requests}, "
+            f"errors={errors}, "
+            f"error_rate={error_rate:.2f}%, "
+            f"req/min={req_per_min:.2f}"
         )
         
         # Log per-endpoint metrics (top 5 by count)
@@ -217,13 +223,21 @@ class MetricsCollector:
         )[:5]
         
         for endpoint, data in sorted_endpoints:
+            count = data.get('count', 0)
+            errors = data.get('errors', 0)
+            avg_time = data.get('avg_time', 0)
+            p95_time = data.get('p95_time')
+            error_rate = data.get('error_rate', 0)
+            
+            p95_str = f"{p95_time:.4f}s" if p95_time is not None else "N/A"
+            
             logger.info(
                 f"Metrics for {endpoint}: "
-                f"count={data['count']}, "
-                f"errors={data['errors']}, "
-                f"avg={data['avg_time']:.4f}s, "
-                f"p95={data['p95_time']:.4f if data['p95_time'] else 'N/A'}s, "
-                f"error_rate={data['error_rate']:.2f}%"
+                f"count={count}, "
+                f"errors={errors}, "
+                f"avg={avg_time:.4f}s, "
+                f"p95={p95_str}, "
+                f"error_rate={error_rate:.2f}%"
             )
         
         # Log slow requests if any

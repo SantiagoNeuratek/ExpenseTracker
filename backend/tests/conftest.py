@@ -1,5 +1,7 @@
 import os
 import pytest
+import random
+import string
 from typing import Generator, Dict, Any
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -24,6 +26,14 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+# Helper function to generate random strings
+@pytest.fixture
+def random_string():
+    def _generate(length=10):
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    return _generate
 
 
 @pytest.fixture(scope="session")
@@ -64,7 +74,7 @@ def client(db) -> Generator:
     
     # Override the authentication dependencies
     def override_get_current_user():
-        return get_test_user(db)
+        return get_test_admin(db)
     
     def override_get_current_admin():
         return get_test_admin(db)
@@ -96,6 +106,12 @@ def user_token(db) -> str:
     return create_access_token(
         user.id, user.company_id, user.is_admin
     )
+
+
+@pytest.fixture(scope="function")
+def normal_user(db) -> User:
+    """Get the regular test user"""
+    return get_test_user(db)
 
 
 def setup_test_data(db: Session) -> None:

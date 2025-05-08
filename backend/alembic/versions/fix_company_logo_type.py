@@ -8,6 +8,7 @@ Create Date: 2023-11-15 14:30:00.000000
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import text
 import base64
 
 # revision identifiers, used by Alembic.
@@ -23,14 +24,14 @@ def upgrade() -> None:
     
     # Execute raw SQL to convert binary data to base64 string
     conn = op.get_bind()
-    companies = conn.execute("SELECT id, logo FROM companies").fetchall()
+    companies = conn.execute(text("SELECT id, logo FROM companies")).fetchall()
     
     for company_id, logo in companies:
         if logo is not None:
             # Convert binary to base64 string
             logo_string = base64.b64encode(logo).decode('utf-8')
             conn.execute(
-                f"UPDATE companies SET temp_logo = '{logo_string}' WHERE id = {company_id}"
+                text(f"UPDATE companies SET temp_logo = '{logo_string}' WHERE id = {company_id}")
             )
     
     # Drop the old column and rename the new one
@@ -52,7 +53,7 @@ def downgrade() -> None:
     
     # Execute raw SQL to convert base64 string back to binary
     conn = op.get_bind()
-    companies = conn.execute("SELECT id, logo FROM companies").fetchall()
+    companies = conn.execute(text("SELECT id, logo FROM companies")).fetchall()
     
     for company_id, logo in companies:
         if logo is not None:
@@ -61,12 +62,12 @@ def downgrade() -> None:
                 binary_data = base64.b64decode(logo)
                 # Need to use parameters properly to avoid SQL injection and handle binary data
                 conn.execute(
-                    "UPDATE companies SET temp_logo = %s WHERE id = %s", 
-                    (binary_data, company_id)
+                    text("UPDATE companies SET temp_logo = :data WHERE id = :id"),
+                    {"data": binary_data, "id": company_id}
                 )
             except:
                 # If conversion fails, set to NULL
-                conn.execute(f"UPDATE companies SET temp_logo = NULL WHERE id = {company_id}")
+                conn.execute(text(f"UPDATE companies SET temp_logo = NULL WHERE id = {company_id}"))
     
     # Drop the old column and rename the new one
     op.drop_column('companies', 'logo')

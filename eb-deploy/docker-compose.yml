@@ -19,6 +19,11 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=expense_tracker
       - SECRETS_ARN=${SECRETS_ARN}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
     image: 532123131998.dkr.ecr.us-east-2.amazonaws.com/expense-tracker-frontend:latest

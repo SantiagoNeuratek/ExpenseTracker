@@ -12,7 +12,13 @@ if not SQLALCHEMY_DATABASE_URI:
     db_password = os.getenv("POSTGRES_PASSWORD", settings.POSTGRES_PASSWORD)
     db_server = os.getenv("POSTGRES_SERVER", settings.POSTGRES_SERVER)
     db_name = os.getenv("POSTGRES_DB", settings.POSTGRES_DB)
-    SQLALCHEMY_DATABASE_URI = f"postgresql://{db_user}:{db_password}@{db_server}:5433/{db_name}"
+    
+    # Use port 5432 for PostgreSQL within Docker networking, 5433 only for localhost connections
+    db_port = "5432"
+    if db_server == "localhost":
+        db_port = "5433"
+        
+    SQLALCHEMY_DATABASE_URI = f"postgresql://{db_user}:{db_password}@{db_server}:{db_port}/{db_name}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URI, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

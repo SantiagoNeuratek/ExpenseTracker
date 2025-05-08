@@ -21,7 +21,13 @@ config = context.config
 # Configurar la URL de la base de datos desde las variables de entorno
 database_url = os.environ.get("SQLALCHEMY_DATABASE_URI")
 if not database_url:
-    database_url = f"postgresql://{os.environ.get('POSTGRES_USER', 'postgres')}:{os.environ.get('POSTGRES_PASSWORD', 'postgres')}@{os.environ.get('POSTGRES_SERVER', 'localhost')}:5433/{os.environ.get('POSTGRES_DB', 'expense_tracker')}"
+    # Use port 5432 for PostgreSQL within Docker networking
+    pg_port = os.environ.get('POSTGRES_PORT', '5432')
+    # If we're connecting to localhost from outside Docker, we might use 5433
+    if os.environ.get('POSTGRES_SERVER', 'localhost') == 'localhost':
+        pg_port = '5433'
+        
+    database_url = f"postgresql://{os.environ.get('POSTGRES_USER', 'postgres')}:{os.environ.get('POSTGRES_PASSWORD', 'postgres')}@{os.environ.get('POSTGRES_SERVER', 'localhost')}:{pg_port}/{os.environ.get('POSTGRES_DB', 'expense_tracker')}"
 
 config.set_main_option("sqlalchemy.url", database_url)
 

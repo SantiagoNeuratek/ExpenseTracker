@@ -25,11 +25,7 @@ def list_companies(
     """
     companies = db.query(Company).order_by(Company.name).all()
     
-    # Convertir los logos binarios a base64 para la respuesta
-    for company in companies:
-        if company.logo and not isinstance(company.logo, str):
-            company.logo = base64.b64encode(company.logo).decode('utf-8') if company.logo else None
-    
+    # No need to convert - logos are already stored as base64 strings
     return companies
 
 
@@ -51,21 +47,35 @@ def create_company(
             detail="Ya existe una empresa con este nombre.",
         )
 
+    # Ensure the logo is properly handled
+    logo_string = None
+    if company_in.logo:
+        # The logo comes in as bytes but needs to be stored as a string
+        # Make sure we're not dealing with a placeholder 1x1 pixel
+        try:
+            # The base64 should already be decoded from the frontend
+            logo_string = company_in.logo.decode('utf-8') if isinstance(company_in.logo, bytes) else company_in.logo
+            
+            # Validate the logo is not the empty 1x1 pixel
+            if logo_string == "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==":
+                logo_string = None
+                print("Warning: Empty 1x1 pixel logo detected and ignored")
+        except Exception as e:
+            print(f"Error processing logo: {e}")
+            logo_string = None
+
     # Crear la empresa
     company = Company(
         name=company_in.name,
         address=company_in.address,
         website=str(company_in.website),
-        logo=company_in.logo,
+        logo=logo_string,  # Store as string
     )
     db.add(company)
     db.commit()
     db.refresh(company)
     
-    # Convertir logo binario a base64 para la respuesta
-    if company.logo and not isinstance(company.logo, str):
-        company.logo = base64.b64encode(company.logo).decode('utf-8') if company.logo else None
-
+    # No need to convert the logo - it's already a string
     return company
 
 
@@ -91,10 +101,7 @@ def read_company(
             status_code=status.HTTP_404_NOT_FOUND, detail="Empresa no encontrada"
         )
     
-    # Convertir logo binario a base64 para la respuesta
-    if company.logo and not isinstance(company.logo, str):
-        company.logo = base64.b64encode(company.logo).decode('utf-8') if company.logo else None
-
+    # No need to convert - logos are already stored as base64 strings
     return company
 
 

@@ -302,3 +302,109 @@ The application includes several monitoring endpoints:
 [MIT License](LICENSE)
 # ASP-2025
 Obligatorio ASP
+
+## Local Development Setup
+
+### Option 1: Local Development with Docker
+
+The easiest way to run the application locally is using Docker Compose:
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd expenses-tracker-saas
+
+# Start the local development environment
+docker-compose -f docker-compose-local.yml up
+```
+
+This will start:
+- PostgreSQL database on port 5433
+- Backend API server on port 8000
+- Frontend development server on port 5173
+
+You can access the application at:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000/api/v1/docs
+
+### Option 2: Manual Setup
+
+If you prefer not to use Docker, you can set up the components individually:
+
+#### Backend Setup:
+```bash
+cd backend
+pip install poetry
+poetry install
+poetry shell
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### Frontend Setup:
+```bash
+cd frontend-react
+npm install
+npm run dev
+```
+
+## AWS Deployment
+
+The application is configured for deployment on AWS Elastic Beanstalk with Docker containers:
+
+1. Build and push Docker images to Amazon ECR:
+```bash
+# Backend
+docker buildx build --platform linux/amd64 -t <aws-account-id>.dkr.ecr.<region>.amazonaws.com/expense-tracker-backend:latest ./backend --push
+
+# Frontend
+docker buildx build --platform linux/amd64 -t <aws-account-id>.dkr.ecr.<region>.amazonaws.com/expense-tracker-frontend:latest ./frontend-react --push
+```
+
+2. Deploy to Elastic Beanstalk:
+   - Create a new Elastic Beanstalk environment using the Docker platform
+   - Upload the deployment.zip file containing:
+     - docker-compose.yml
+     - Dockerrun.aws.json
+     - .ebextensions/ folder
+
+3. Cleanup after deployment:
+```bash
+./cleanup.sh
+```
+
+## CI/CD Pipeline
+
+This project includes a GitHub Actions workflow for automated deployments to AWS:
+
+### Automatic Image Builds
+
+Every push to the `main` branch automatically:
+- Builds the backend and frontend Docker images for AMD64 architecture
+- Pushes the images to Amazon ECR with both `latest` and commit-specific tags
+
+### Manual Deployment to Elastic Beanstalk
+
+You can trigger a full deployment to Elastic Beanstalk through GitHub Actions:
+
+1. Go to the "Actions" tab in your GitHub repository
+2. Select the "AWS Deploy Pipeline" workflow
+3. Click "Run workflow"
+4. Check "Deploy to Elastic Beanstalk" option
+5. Click "Run workflow" to start the deployment
+
+### Required GitHub Secrets
+
+To use the CI/CD pipeline, add these secrets to your GitHub repository:
+
+- `AWS_ACCESS_KEY_ID`: Your AWS access key with permissions for ECR and Elastic Beanstalk
+- `AWS_SECRET_ACCESS_KEY`: The corresponding secret key
+
+### Customizing the Pipeline
+
+You can modify the workflow file at `.github/workflows/aws-deploy.yml` to adjust:
+- AWS region
+- Repository names
+- Environment names
+- Deployment triggers
+
+## Contributing

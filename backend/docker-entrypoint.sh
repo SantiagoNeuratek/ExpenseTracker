@@ -8,7 +8,7 @@ sleep 5
 
 # Ejecutar migraciones
 echo "Ejecutando migraciones de la base de datos..."
-alembic upgrade head
+alembic upgrade heads
 
 # Cargar datos iniciales si es necesario
 if [ "$LOAD_INITIAL_DATA" = "true" ]; then

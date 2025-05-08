@@ -26,12 +26,6 @@ WORKDIR /app
 # Copiar todo el código primero
 COPY . .
 
-# Copy the env.example to .env as a starting point
-RUN cp env.example .env
-
-# Remove any existing SQLALCHEMY_DATABASE_URI from the .env file
-RUN sed -i '/SQLALCHEMY_DATABASE_URI/d' .env
-
 # ARG to control whether to install dev dependencies
 ARG INSTALL_DEV=false
 
@@ -45,12 +39,14 @@ RUN if [ "${INSTALL_DEV}" = "true" ] ; then \
 # Install psutil separately in case it's not in poetry dependencies
 RUN pip install psutil
 
-# Hacer ejecutable el script de entrada
+# Hacer ejecutable el script de entrada - update permissions properly
 RUN chmod +x /app/docker-entrypoint.sh
 
 # Create non-root user (for better security)
 RUN adduser --disabled-password --gecos "" appuser
 RUN chown -R appuser:appuser /app
+# Make sure entrypoint script is still executable after ownership change
+RUN chmod 755 /app/docker-entrypoint.sh
 USER appuser
 
 # Expose port

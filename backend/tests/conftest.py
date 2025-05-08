@@ -2,6 +2,7 @@ import os
 import pytest
 import random
 import string
+import base64
 from typing import Generator, Dict, Any
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -117,11 +118,14 @@ def normal_user(db) -> User:
 def setup_test_data(db: Session) -> None:
     """Set up initial test data"""
     # Create test company
+    test_logo_bytes = b"test_logo_data"
+    test_logo = base64.b64encode(test_logo_bytes).decode('utf-8')
+    
     company = Company(
         name="Test Company",
         address="123 Test St",
         website="https://test.com",
-        logo=b"test_logo_data"
+        logo=test_logo
     )
     db.add(company)
     db.flush()

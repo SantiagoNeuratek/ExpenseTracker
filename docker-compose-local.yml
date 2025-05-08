@@ -1,0 +1,87 @@
+version: '3'
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=expense_tracker
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: 
+      context: ./backend
+      args:
+        - INSTALL_DEV=false
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      # Database configuration
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=expense_tracker
+      # Explicitly set the database URI with correct internal port (5432)
+      - SQLALCHEMY_DATABASE_URI=postgresql://postgres:postgres@db:5432/expense_tracker
+      
+      # Application settings
+      - SECRET_KEY=tu_clave_secreta_muy_larga_y_segura
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60480
+      - SERVER_NAME=ExpenseTracker
+      - SERVER_HOST=http://localhost:8000
+      - API_V1_STR=/api/v1
+      
+      # CORS settings
+      - BACKEND_CORS_ORIGINS=["http://localhost:8501","http://localhost:8000","http://localhost:5173","http://localhost:5174","http://frontend:80"]
+      
+      # Email settings
+      # SECURITY WARNING: Do not store actual secrets in this file. 
+      # For production, use .env files or Docker secrets
+      - SMTP_TLS=True
+      - SMTP_PORT=587
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_USER=expensetracker148@gmail.com
+      # NEVER commit actual passwords to version control! Use .env file instead
+      - SMTP_PASSWORD=uzdp dsqb udwv zawk
+      - EMAILS_FROM_EMAIL=expensetracker148@gmail.com
+      - EMAILS_FROM_NAME=Expense Tracker
+      
+      # Logging configuration
+      - LOG_LEVEL=INFO
+      - JSON_LOGS=true
+      - ENVIRONMENT=development
+      
+      # Data initialization
+      - LOAD_INITIAL_DATA=true
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: 
+      context: ./frontend-react
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend-react:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data: 

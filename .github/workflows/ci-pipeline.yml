@@ -28,7 +28,7 @@ jobs:
     - name: Update Poetry lock file
       run: |
         cd backend
-        poetry lock --no-update
+        poetry lock
         
     - name: Install dependencies
       run: |
